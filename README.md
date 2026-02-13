@@ -4,12 +4,12 @@
 ![Stack](https://img.shields.io/badge/Stack-Full--Stack-blue)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 
-> **"Bridging the gap between surplus food and hunger using Artificial Intelligence."**
+> **\"Bridging the gap between surplus food and hunger using Artificial Intelligence.\"**
 
 ## 📖 Project Overview
 **FoodSave** is a full-stack web application designed to minimize food wastage in the hospitality sector. It connects food donors (Hotels, Restaurants) with charitable organizations (NGOs) in real-time.
 
-Unlike standard donation platforms, **FoodSave integrates a Machine Learning model (Random Forest)** to predict the "Safe Consumption Time" (Shelf Life) of cooked food based on environmental factors like temperature and preparation time. This ensures that only safe, hygienic food is distributed to the needy.
+Unlike standard donation platforms, **FoodSave integrates a Machine Learning model (Random Forest)** to predict the \"Safe Consumption Time\" (Shelf Life) of cooked food based on environmental factors like temperature and preparation time. This ensures that only safe, hygienic food is distributed to the needy.
 
 ---
 
@@ -18,7 +18,7 @@ Unlike standard donation platforms, **FoodSave integrates a Machine Learning mod
 ### 🏨 For Donors (Hotels/Restaurants)
 *   **Easy Listing:** Post surplus food details (Type, Quantity, Cooked Time).
 *   **AI Safety Check:** Automated calculation of expiry time. The system rejects entries predicted to spoil before pickup.
-*   **Impact Dashboard:** Gamified tracking of "Total KGs Saved" and "People Fed".
+*   **Impact Dashboard:** Gamified tracking of \"Total KGs Saved\" and \"People Fed\".
 
 ### 🤝 For NGOs (Receivers)
 *   **Real-Time Feed:** View available food listings sorted by proximity and expiry time.
@@ -45,6 +45,12 @@ Unlike standard donation platforms, **FoodSave integrates a Machine Learning mod
 | **Deploy** | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white) ![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white) | CI/CD automated deployment pipeline. |
 
 ---
+
+<!-- Mermaid support for GitHub Pages (Jekyll) -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true });
+</script>
 
 ## 🏗️ System Architecture
 
@@ -140,6 +146,6 @@ sequenceDiagram
     DB-->>API: Success (ID: 101)
     
     API-->>FE: 201 Created (with Expiry Date)
-    FE-->>Donor: Show "Food Listed Successfully"
+    FE-->>Donor: Show \"Food Listed Successfully\"
 
 ```
