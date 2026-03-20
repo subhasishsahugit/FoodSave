@@ -1,4 +1,5 @@
 # 🍎 FoodSave – AI-Based Food Wastage Reduction System
+<img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/70fe96cd-c3bc-45cc-8c46-2901e95d8c43" />
 
 ![Status](https://img.shields.io/badge/Status-Prototype-green)
 ![Stack](https://img.shields.io/badge/Stack-Full--Stack-blue)
