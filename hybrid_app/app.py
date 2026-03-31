@@ -1,20 +1,22 @@
-import os
 import pickle
 import sqlite3
 import json
 import math
 import secrets
+import random as _rand
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request, send_from_directory, abort
+from flask import Flask, jsonify, render_template, request
 from sklearn.ensemble import RandomForestRegressor
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "foodsave.db"
-MODEL_PATH = BASE_DIR / "food_model_v2.pkl"  # v2: 5-feature model
+DATA_DIR = BASE_DIR / "data"
+WEB_DIR = BASE_DIR / "web"
+DB_PATH = DATA_DIR / "foodsave.db"
+MODEL_PATH = DATA_DIR / "food_model_v2.pkl"  # v2: 5-feature model
 
 # Encoding maps for categorical inputs
 FOOD_CAT_MAP = {"protein": 0, "dairy": 1, "produce": 2, "grains": 3, "prepared": 4}
@@ -36,7 +38,12 @@ ODISHA_CITIES: dict[str, tuple[float, float]] = {
 }
 _ODISHA_COORDS = list(ODISHA_CITIES.values())
 
-app = Flask(__name__, template_folder="templates")
+app = Flask(
+    __name__,
+    template_folder=str(WEB_DIR / "templates"),
+    static_folder=str(WEB_DIR / "static"),
+    static_url_path="/static",
+)
 app.json.ensure_ascii = False
 
 
@@ -275,7 +282,6 @@ def init_db() -> None:
         conn.commit()
 
     # ── location_text on users ─────────────────────────────────────────────
-    import random as _rand
     with get_conn() as conn:
         user_cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
         if "location_text" not in user_cols:
@@ -631,17 +637,14 @@ def get_claim_chat_context(conn: sqlite3.Connection, food_id: int, username: str
 
 @app.route("/v2/", defaults={"vpath": ""})
 @app.route("/v2/<path:vpath>")
-def frontendv2(vpath: str):
-    """Backward-compatible route that now serves the unified index template."""
-    if vpath.startswith("api/"):
-        return jsonify({"status": "error", "message": "not found"}), 404
-    return render_template("index.html")
-
-
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def home(path: str):
+def serve_spa(path: str = "", vpath: str = ""):
+    """Serve SPA shell for all non-API routes, including legacy /v2 paths."""
+    route_path = vpath or path
     if path.startswith("api/"):
+        return jsonify({"status": "error", "message": "not found"}), 404
+    if route_path.startswith("api/"):
         return jsonify({"status": "error", "message": "not found"}), 404
     return render_template("index.html")
 
@@ -732,7 +735,6 @@ def api_register():
         return jsonify({"status": "error", "message": "username already exists"}), 409
 
     # Create user_settings with the chosen city's coordinates
-    import random as _rand
     base_lat, base_lng = ODISHA_CITIES[city]
     reg_lat = round(base_lat + _rand.uniform(-0.03, 0.03), 6)
     reg_lng = round(base_lng + _rand.uniform(-0.03, 0.03), 6)

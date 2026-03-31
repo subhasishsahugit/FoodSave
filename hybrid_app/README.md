@@ -19,7 +19,7 @@ pip install -r requirements.txt
 ### 2. Seed the Database
 
 ```powershell
-python seed_db.py
+python scripts/seed_db.py
 ```
 
 This creates test users:
@@ -45,11 +45,10 @@ Declared in [requirements.txt](requirements.txt):
 - pandas
 - numpy
 - scikit-learn
-- plotly
 
 ### Frontend/CDN dependencies (loaded in browser)
 
-Declared in [templates/index.html](templates/index.html):
+Declared in [web/templates/index.html](web/templates/index.html):
 - React 18 (`react`, `react-dom`)
 - Babel Standalone
 - Tailwind CSS CDN
@@ -74,7 +73,7 @@ cd hybrid_app
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python seed_db.py
+python scripts/seed_db.py
 python app.py
 ```
 
@@ -129,12 +128,19 @@ streamlit run app.py
 ```
 hybrid_app/
 ├── app.py                  # Flask backend + API + AI
-├── templates/
-│   └── index.html         # Complete React SPA (CDN-based)
+├── web/
+│   ├── templates/
+│   │   └── index.html     # Complete React SPA (CDN-based)
+│   └── static/
+│       ├── css/
+│       ├── js/
+│       └── img/
 ├── requirements.txt       # Python dependencies
-├── seed_db.py            # Database seeding script
-├── foodsave.db           # SQLite database (auto-created)
-└── food_model.pkl        # AI model (auto-created)
+├── scripts/
+│   └── seed_db.py         # Database seeding script
+└── data/
+   ├── foodsave.db        # SQLite database
+   └── food_model_v2.pkl  # Trained AI model
 ```
 
 ## 🎨 UI/UX Features
@@ -143,7 +149,7 @@ hybrid_app/
 - **Glassmorphism Cards**: Frosted-glass effect on all panels
 - **Real-time Sliders**: Live temperature and time inputs
 - **AI Visual Feedback**: Green (safe) / Red (unsafe) result cards
-- **Responsive Grid**: Works on mobile, tablet, and desktop
+- **Responsive Grid**: Optimized for desktop-first workflows
 
 ## 🧠 How It Works
 

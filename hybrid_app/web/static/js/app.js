@@ -1,283 +1,66 @@
 ﻿    const { useMemo, useRef, useState, useEffect, useContext } = React;
-
-    const PUBLIC_ROUTES = ['/home', '/about', '/impact', '/leaderboard', '/contact', '/login', '/register', '/forgot-password', '/reset-password', '/'];
-    const PUBLIC_DISCLOSURE_ROUTES = ['/home', '/about', '/impact', '/leaderboard', '/contact'];
-    const DONOR_ROUTES = ['/donor/dashboard', '/donor/donate', '/donor/active', '/donor/history'];
-    const NGO_ROUTES = ['/ngo/dashboard', '/ngo/live-feed', '/ngo/map-view', '/ngo/active-claims', '/ngo/history', '/ngo/ai-advisor'];
-    const SETTINGS_ROUTES = ['/settings/profile', '/settings/location', '/settings/alerts'];
-    const SHARED_AUTH_ROUTES = ['/visualizations'];
-    const ADMIN_ROUTES = ['/admin/overview', '/admin/users', '/admin/ai-logs'];
-    const PUBLIC_NAV_LINKS = [
-      { to: '/home', label: 'Home' },
-      { to: '/about', label: 'About Us' },
-      { to: '/impact', label: 'Impact' },
-      { to: '/leaderboard', label: 'Leaderboard' },
-      { to: '/contact', label: 'Contact' },
-    ];
-    const ROLE_NAV_LINKS = {
-      DONOR: [
-        { to: '/donor/dashboard', label: 'Dashboard' },
-        { to: '/donor/donate', label: 'Donate' },
-        { to: '/donor/active', label: 'Active' },
-        { to: '/donor/history', label: 'History' },
-        { to: '/leaderboard', label: 'Leaderboard' },
-        { to: '/visualizations', label: 'Visual Lab' },
-        { to: '/contact', label: 'Contact' },
-      ],
-      NGO: [
-        { to: '/ngo/dashboard', label: 'Dashboard' },
-        { to: '/ngo/live-feed', label: 'Live Feed' },
-        { to: '/ngo/map-view', label: 'Map View' },
-        { to: '/ngo/active-claims', label: 'Claims' },
-        { to: '/ngo/history', label: 'History' },
-        { to: '/ngo/ai-advisor', label: 'AI Advisor' },
-        { to: '/visualizations', label: 'Visual Lab' },
-        { to: '/contact', label: 'Contact' },
-      ],
-      ADMIN: [
-        { to: '/admin/overview', label: 'Overview' },
-        { to: '/admin/users', label: 'Users' },
-        { to: '/admin/ai-logs', label: 'AI Logs' },
-        { to: '/leaderboard', label: 'Leaderboard' },
-        { to: '/visualizations', label: 'Visual Lab' },
-        { to: '/contact', label: 'Contact' },
-      ],
-    };
-    const NAV_ICON_BY_ROUTE = {
-      '/home': 'fa-home',
-      '/about': 'fa-info-circle',
-      '/impact': 'fa-chart-line',
-      '/visualizations': 'fa-chart-pie',
-      '/leaderboard': 'fa-trophy',
-      '/contact': 'fa-envelope',
-      '/login': 'fa-sign-in-alt',
-      '/register': 'fa-user-plus',
-      '/donor/dashboard': 'fa-th-large',
-      '/donor/donate': 'fa-magic',
-      '/donor/active': 'fa-clipboard-check',
-      '/donor/history': 'fa-history',
-      '/ngo/dashboard': 'fa-th-large',
-      '/ngo/live-feed': 'fa-bolt',
-      '/ngo/map-view': 'fa-map-marker-alt',
-      '/ngo/active-claims': 'fa-id-card',
-      '/ngo/history': 'fa-book-open',
-      '/ngo/ai-advisor': 'fa-robot',
-      '/admin/overview': 'fa-th-large',
-      '/admin/users': 'fa-users-cog',
-      '/admin/ai-logs': 'fa-microchip',
-    };
+    const {
+      PUBLIC_ROUTES,
+      PUBLIC_DISCLOSURE_ROUTES,
+      DONOR_ROUTES,
+      NGO_ROUTES,
+      SETTINGS_ROUTES,
+      SHARED_AUTH_ROUTES,
+      ADMIN_ROUTES,
+      PUBLIC_NAV_LINKS,
+      ROLE_NAV_LINKS,
+      NAV_ICON_BY_ROUTE,
+    } = window.FoodSaveConfig;
+    const {
+      normalizeRoutePath,
+      getDefaultRouteForUser,
+      navigate,
+      isRouteActive,
+      getToneVars,
+      getSafeHoursTone,
+      getRankTone,
+      buildMonotonicFunnelStages,
+    } = window.FoodSaveUtils;
+    const { apiGet, apiSend } = window.FoodSaveApi;
     const DisclosureContext = React.createContext({ compactMode: false, forceExpanded: null });
+    const BG_THEME_OPTIONS = [
+      { value: 'aurora', label: 'Aurora' },
+      { value: 'sunset', label: 'Sunset' },
+      { value: 'forest', label: 'Forest' },
+      { value: 'ocean', label: 'Ocean' },
+    ];
 
-    function normalizeRoutePath(rawPath) {
-      const value = String(rawPath || '/').trim();
-      if (value === '/' || value === '') return '/home';
-      if (value.startsWith('/reset-password/')) return '/reset-password';
-      const normalized = value.endsWith('/') ? value.slice(0, -1) : value;
-      return normalized || '/home';
+    const SETTINGS_PROFILE_ENDPOINT = '/api/settings/profile';
+
+    async function fetchProfileSettings(username, fallbackErrorMessage) {
+      const data = await apiGet(`${SETTINGS_PROFILE_ENDPOINT}?username=${encodeURIComponent(username || '')}`);
+      return data.settings || {};
     }
 
-    function getDefaultRouteForUser(user) {
-      if (!user) return '/home';
-      if (user.role === 'DONOR') return '/donor/dashboard';
-      if (user.role === 'NGO') return '/ngo/dashboard';
-      if (user.role === 'ADMIN') return '/admin/overview';
-      return '/home';
-    }
-
-    function navigate(setPath, path) {
-      const nextPath = normalizeRoutePath(path);
-      const currentPath = normalizeRoutePath(window.location.pathname);
-      if (currentPath === nextPath) return;
-
-      const routeHost = document.getElementById('route-content');
-      if (!routeHost) {
-        window.history.pushState({}, '', nextPath);
-        setPath(nextPath);
-        return;
-      }
-
-      if (window.__fsRouteTransitionLock) {
-        // Fallback path: do not block navigation if a previous transition lock lingers.
-        window.history.pushState({}, '', nextPath);
-        setPath(nextPath);
-        routeHost.classList.remove('route-exit');
-        return;
-      }
-      window.__fsRouteTransitionLock = true;
-
-      routeHost.classList.remove('route-enter');
-      routeHost.classList.add('route-exit');
-
-      window.setTimeout(() => {
-        try {
-          window.history.pushState({}, '', nextPath);
-          setPath(nextPath);
-        } finally {
-          window.setTimeout(() => {
-            window.__fsRouteTransitionLock = false;
-            routeHost.classList.remove('route-exit');
-          }, 40);
-        }
-      }, 140);
-    }
-
-    function isRouteActive(currentPath, targetPath) {
-      const current = normalizeRoutePath(currentPath);
-      const target = normalizeRoutePath(targetPath);
-      return current === target || current.startsWith(`${target}/`);
-    }
-
-    function getToneVars(tone) {
-      const palette = {
-        neutral: {
-          text: 'var(--mono-text-muted)',
-          bg: 'var(--surface-elev-2)',
-          border: 'var(--mono-border)',
-        },
-        success: {
-          text: 'var(--theme-success)',
-          bg: 'var(--theme-success-bg)',
-          border: 'var(--theme-success-border)',
-        },
-        warning: {
-          text: 'var(--theme-warning)',
-          bg: 'var(--theme-warning-bg)',
-          border: 'var(--theme-warning-border)',
-        },
-        danger: {
-          text: 'var(--theme-danger)',
-          bg: 'var(--theme-danger-bg)',
-          border: 'var(--theme-danger-border)',
-        },
-        info: {
-          text: 'var(--theme-info)',
-          bg: 'var(--theme-info-bg)',
-          border: 'var(--theme-info-border)',
-        },
-        rank2: {
-          text: 'var(--theme-rank-2)',
-          bg: 'var(--theme-rank-2-bg)',
-          border: 'var(--theme-rank-2-border)',
-        },
-        rank3: {
-          text: 'var(--theme-rank-3)',
-          bg: 'var(--theme-rank-3-bg)',
-          border: 'var(--theme-rank-3-border)',
-        },
-      };
-      return palette[tone] || palette.neutral;
-    }
-
-    function getSafeHoursTone(hours) {
-      if (hours <= 2) return getToneVars('danger');
-      if (hours <= 5) return getToneVars('warning');
-      return getToneVars('success');
-    }
-
-    function getRankTone(index) {
-      if (index === 0) return getToneVars('warning');
-      if (index === 1) return getToneVars('rank2');
-      if (index === 2) return getToneVars('rank3');
-      return getToneVars('info');
-    }
-
-    function useIsMobile(breakpoint = 860) {
-      const [isMobile, setIsMobile] = useState(() => window.innerWidth <= breakpoint);
-      useEffect(() => {
-        const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-      }, [breakpoint]);
-      return isMobile;
-    }
-
-    function MobileBottomNav({ user, path, setPath, unreadCount }) {
-      if (!user) return null;
-
-      const tabsByRole = {
-        DONOR: [
-          { to: '/donor/dashboard', icon: 'fa-home', label: 'Home' },
-          { to: '/donor/active', icon: 'fa-list-check', label: 'Active' },
-          { to: '/visualizations', icon: 'fa-chart-pie', label: 'Lab' },
-          { to: '/settings/profile', icon: 'fa-user', label: 'Profile' },
-        ],
-        NGO: [
-          { to: '/ngo/dashboard', icon: 'fa-home', label: 'Home' },
-          { to: '/ngo/live-feed', icon: 'fa-bolt', label: 'Feed' },
-          { to: '/visualizations', icon: 'fa-chart-pie', label: 'Lab' },
-          { to: '/settings/profile', icon: 'fa-user', label: 'Profile' },
-        ],
-        ADMIN: [
-          { to: '/admin/overview', icon: 'fa-home', label: 'Home' },
-          { to: '/admin/users', icon: 'fa-users-cog', label: 'Users' },
-          { to: '/visualizations', icon: 'fa-chart-pie', label: 'Lab' },
-          { to: '/settings/profile', icon: 'fa-user', label: 'Profile' },
-        ],
-      };
-
-      const fabByRole = {
-        DONOR: { to: '/donor/donate', icon: 'fa-plus', label: 'Add food' },
-        NGO: { to: '/ngo/live-feed', icon: 'fa-hand-holding-heart', label: 'Claim' },
-        ADMIN: { to: '/admin/ai-logs', icon: 'fa-shield-alt', label: 'Audit' },
-      };
-
-      const tabs = tabsByRole[user.role] || tabsByRole.DONOR;
-      const fab = fabByRole[user.role] || fabByRole.DONOR;
-
-      return (
-        <>
-          <button
-            className="mobile-fab"
-            onClick={() => navigate(setPath, fab.to)}
-            title={fab.label}
-            aria-label={fab.label}
-          >
-            <i className={`fas ${fab.icon}`}></i>
-          </button>
-
-          <nav className="mobile-tabbar" aria-label="Mobile bottom navigation">
-            {tabs.map((tab, idx) => {
-              const isActive = isRouteActive(path, tab.to) || (tab.to === '/settings/profile' && path.startsWith('/settings/'));
-              const offsetClass = idx >= 2 ? 'right-offset' : 'left-offset';
-              return (
-                <button
-                  key={tab.to}
-                  className={`mobile-tab-item ${offsetClass} ${isActive ? 'active' : ''}`}
-                  onClick={() => navigate(setPath, tab.to)}
-                >
-                  <i className={`fas ${tab.icon}`}></i>
-                  <span>{tab.label}</span>
-                  {tab.to === '/settings/profile' && unreadCount > 0 && <em className="mobile-tab-badge">{unreadCount}</em>}
-                </button>
-              );
-            })}
-          </nav>
-        </>
-      );
-    }
-
-    function buildMonotonicFunnelStages(stages) {
-      let previousValue = Number.POSITIVE_INFINITY;
-
-      return stages.map((stage) => {
-        const rawValue = Math.max(0, Number(stage.value || 0));
-        const value = Math.min(previousValue, rawValue);
-        previousValue = value;
-        return { ...stage, rawValue, value };
+    async function saveProfileSettings(username, values, fallbackErrorMessage) {
+      const data = await apiSend(SETTINGS_PROFILE_ENDPOINT, {
+        method: 'PUT',
+        body: { username, values },
       });
+      if (data.status !== 'success') throw new Error(data.message || fallbackErrorMessage);
+      return data;
     }
 
-    function renderPlot(host, traces, layout = {}, config = {}) {
+    function renderPlot(host, traces, layout = {}, config = {}, theme = 'dark') {
       if (!host || typeof Plotly === 'undefined') return false;
 
+      const isDark = theme !== 'light';
       const normalizedLayout = {
         hoverlabel: {
-          bgcolor: 'rgba(7, 18, 25, 0.96)',
-          bordercolor: 'rgba(34, 211, 238, 0.4)',
-          font: { color: '#ecfeff', size: 12 },
+          bgcolor: isDark ? 'rgba(7, 18, 25, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+          bordercolor: isDark ? 'rgba(34, 211, 238, 0.4)' : 'rgba(14, 116, 144, 0.4)',
+          font: { color: isDark ? '#ecfeff' : '#111111', size: 12 },
           namelength: -1,
           ...(layout.hoverlabel || {}),
         },
+        paper_bgcolor: isDark ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0)',
+        plot_bgcolor: isDark ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0)',
+        font: { color: isDark ? '#ecfeff' : '#111111' },
         ...layout,
       };
 
@@ -366,16 +149,10 @@
       );
     }
 
-    function LiquidNavbar({ user, path, setPath, onLogout, unreadCount, onOpenNotifications, theme, onToggleTheme }) {
-      const [mobileOpen, setMobileOpen] = useState(false);
-
+    function LiquidNavbar({ user, path, setPath, onLogout, unreadCount, onOpenNotifications, theme, onToggleTheme, backgroundTheme, onBackgroundThemeChange }) {
       const navLinks = !user
         ? PUBLIC_NAV_LINKS
         : ROLE_NAV_LINKS[user.role] || PUBLIC_NAV_LINKS;
-
-      useEffect(() => {
-        setMobileOpen(false);
-      }, [path]);
 
       const go = (to, event) => {
         if (event?.currentTarget) {
@@ -425,6 +202,21 @@
                   </button>
                 </li>
               )}
+              <li>
+                <div className="bg-theme-picker-inline" title="Choose page background style">
+                  <i className="fas fa-palette" aria-hidden="true"></i>
+                  <select
+                    className="bg-theme-select"
+                    value={backgroundTheme}
+                    onChange={(e) => onBackgroundThemeChange(e.target.value)}
+                    aria-label="Background theme"
+                  >
+                    {BG_THEME_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </li>
               <li>
                 <button
                   className="apple-nav-link apple-theme-toggle"
@@ -478,68 +270,13 @@
             >
               <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
             </button>
-            <button
-              className="apple-nav-mobile-btn"
-              aria-label="Toggle navigation"
-              onClick={() => setMobileOpen((v) => !v)}
-            >
-              <i className={`fas ${mobileOpen ? 'fa-times' : 'fa-bars'}`}></i>
-            </button>
           </div>
         </div>
-        {mobileOpen && (
-          <div className="apple-mobile-menu">
-            {navLinks.map((item) => (
-              <button
-                key={item.to}
-                className={`apple-mobile-item ${isRouteActive(path, item.to) ? 'active' : ''}`}
-                onClick={(e) => go(item.to, e)}
-              >
-                <i className={`fas ${NAV_ICON_BY_ROUTE[item.to] || 'fa-circle'} me-2`} aria-hidden="true"></i>{item.label}
-              </button>
-            ))}
-            {user && (
-              <button
-                className={`apple-mobile-item ${path.startsWith('/settings/') ? 'active' : ''}`}
-                onClick={(e) => go('/settings/profile', e)}
-              >
-                <i className="fas fa-cog me-2" aria-hidden="true"></i>Settings
-              </button>
-            )}
-            <button
-              className="apple-mobile-item"
-              onClick={onToggleTheme}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} me-2`} aria-hidden="true"></i>
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            </button>
-            {user && (
-              <button className="apple-mobile-item" onClick={onOpenNotifications}>
-                <i className="fas fa-bell me-2" aria-hidden="true"></i>Notifications {unreadCount > 0 ? `(${unreadCount})` : ''}
-              </button>
-            )}
-            {!user && (
-              <button className={`apple-mobile-item ${path === '/login' ? 'active' : ''}`} onClick={(e) => go('/login', e)}>
-                <i className="fas fa-sign-in-alt me-2" aria-hidden="true"></i>Login
-              </button>
-            )}
-            {!user ? (
-              <button className="apple-mobile-item" onClick={(e) => go('/register', e)}>
-                <i className="fas fa-user-plus me-2" aria-hidden="true"></i>Register
-              </button>
-            ) : (
-              <button className="apple-mobile-item" onClick={onLogout}>
-                <i className="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Logout
-              </button>
-            )}
-          </div>
-        )}
         </>
       );
     }
 
-    function AppSidebar({ user, path, setPath, unreadCount, onLogout, onOpenNotifications, theme, onToggleTheme }) {
+    function AppSidebar({ user, path, setPath, unreadCount, onLogout, onOpenNotifications, theme, onToggleTheme, backgroundTheme, onBackgroundThemeChange }) {
       const links = ROLE_NAV_LINKS[user.role] || ROLE_NAV_LINKS.DONOR;
       const initial = (user.username || 'U')[0].toUpperCase();
       const roleClass = (user.role || 'donor').toLowerCase();
@@ -584,81 +321,25 @@
               <button className="yt-settings-btn" onClick={onToggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
                 <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i><span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
               </button>
+              <div className="yt-bg-picker">
+                <div className="yt-bg-picker-label"><i className="fas fa-palette"></i><span>Background</span></div>
+                <select
+                  className="bg-theme-select"
+                  value={backgroundTheme}
+                  onChange={(e) => onBackgroundThemeChange(e.target.value)}
+                  aria-label="Background theme"
+                >
+                  {BG_THEME_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
               <button className="yt-logout-btn" onClick={onLogout}>
                 <i className="fas fa-sign-out-alt"></i><span>Sign out</span>
               </button>
             </div>
           </div>
         </aside>
-      );
-    }
-
-    function MobileAppTopBar({ user, path, setPath, unreadCount, onOpenNotifications, onToggleTheme, theme, onLogout }) {
-      const [menuOpen, setMenuOpen] = useState(false);
-      const links = ROLE_NAV_LINKS[user?.role] || [];
-      const utilityLinks = [
-        { to: '/settings/profile', label: 'Profile', icon: 'fa-user' },
-        { to: '/settings/location', label: 'Location', icon: 'fa-map-marker-alt' },
-        { to: '/settings/alerts', label: 'Alerts', icon: 'fa-bell' },
-      ];
-      const menuLinks = [...links, ...utilityLinks];
-      const currentLabel = (menuLinks.find((item) => isRouteActive(path, item.to)) || {}).label || 'Workspace';
-
-      useEffect(() => {
-        setMenuOpen(false);
-      }, [path]);
-
-      const go = (to) => {
-        navigate(setPath, to);
-        setMenuOpen(false);
-      };
-
-      return (
-        <>
-          <header className="mobile-app-topbar">
-            <div className="mobile-app-title-wrap">
-              <p className="mobile-app-eyebrow mb-0">FoodSave</p>
-              <p className="mobile-app-title mb-0">{currentLabel}</p>
-            </div>
-            <div className="mobile-app-actions">
-              <button className="mobile-app-icon-btn" onClick={onOpenNotifications} aria-label="Open notifications">
-                <i className="fas fa-bell"></i>
-                {unreadCount > 0 && <span className="mobile-app-dot">{Math.min(unreadCount, 99)}</span>}
-              </button>
-              <button className="mobile-app-icon-btn" onClick={onToggleTheme} aria-label="Toggle theme">
-                <i className={`fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
-              </button>
-              <button className="mobile-app-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Open app menu">
-                <i className="fas fa-ellipsis-h"></i>
-              </button>
-            </div>
-          </header>
-
-          {menuOpen && (
-            <div className="mobile-app-sheet-backdrop" onClick={() => setMenuOpen(false)}>
-              <div className="mobile-app-sheet" onClick={(e) => e.stopPropagation()}>
-                <div className="mobile-app-sheet-head">
-                  <h6 className="mb-0">Quick Access</h6>
-                  <button className="btn btn-sm btn-outline-light" onClick={() => setMenuOpen(false)}>Close</button>
-                </div>
-                <div className="mobile-app-sheet-grid">
-                  {menuLinks.map((item) => (
-                    <button
-                      key={item.to}
-                      className={`mobile-app-sheet-item ${isRouteActive(path, item.to) ? 'active' : ''}`}
-                      onClick={() => go(item.to)}
-                    >
-                      <i className={`fas ${NAV_ICON_BY_ROUTE[item.to] || item.icon || 'fa-circle'} me-2`}></i>{item.label}
-                    </button>
-                  ))}
-                </div>
-                <button className="mobile-app-logout" onClick={onLogout}>
-                  <i className="fas fa-sign-out-alt me-2"></i>Logout
-                </button>
-              </div>
-            </div>
-          )}
-        </>
       );
     }
 
@@ -732,12 +413,10 @@
       const predictSafety = async () => {
         setPredicting(true);
         try {
-          const response = await fetch('/api/ai/predict', {
+          const data = await apiSend('/api/ai/predict', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ temp, hours_ago: hoursAgo, food_category: foodCategory, storage, packaging }),
+            body: { temp, hours_ago: hoursAgo, food_category: foodCategory, storage, packaging },
           });
-          const data = await response.json();
           if (data.status === 'success') { setSafeHours(data.safe_hours); setRiskLabel(data.risk); }
         } catch (err) { console.error(err); }
         finally { setPredicting(false); }
@@ -777,16 +456,14 @@
 
       const handleSubmit = async () => {
         if (!foodName || safeHours === null) return;
-        const response = await fetch('/api/food', {
+        const data = await apiSend('/api/food', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: {
             donor_name: user.username, food_name: foodName, qty,
             temp, hours_ago: hoursAgo, food_category: foodCategory,
             storage, packaging, safe_hours: safeHours,
-          }),
+          },
         });
-        const data = await response.json();
         if (data.status === 'success') {
           setFoodName(''); setQty(10); setTemp(25); setHoursAgo(2);
           setFoodCategory('prepared'); setStorage('ambient'); setPackaging('open');
@@ -1837,9 +1514,10 @@
       );
     }
 
-    function VisualizationLab({ analytics, rows, setPath, user }) {
-      const isMobileViewport = useIsMobile();
-      const [activeMobileChart, setActiveMobileChart] = useState('treemap');
+    function VisualizationLab({ analytics, rows, setPath, user, theme = 'dark' }) {
+      const isDark = theme !== 'light';
+      const axisColor = isDark ? '#c4f1ff' : '#374151';
+      const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
       const treemapRef = useRef(null);
       const funnelRef = useRef(null);
       const bubbleRef = useRef(null);
@@ -1862,8 +1540,7 @@
         { key: 'sankey', title: 'Sankey Flow', description: 'Illustrative donor-to-NGO rescue flow showing how supply can move across the network.', ref: sankeyRef },
       ];
 
-      const activeChartMeta = chartCatalog.find((chart) => chart.key === activeMobileChart) || chartCatalog[0];
-      const mountedChartKeys = isMobileViewport ? [activeChartMeta.key] : chartCatalog.map((chart) => chart.key);
+      const mountedChartKeys = chartCatalog.map((chart) => chart.key);
 
       useEffect(() => {
         if (!analytics) return;
@@ -1891,10 +1568,10 @@
         const available = rows.filter((r) => !r.is_claimed).length;
         const claimed = rows.filter((r) => r.is_claimed).length;
         const urgent = rows.filter((r) => Number(r.safe_hours) <= 3).length;
-        const baseHeight = isMobileViewport ? 232 : 300;
-        const mapHeight = isMobileViewport ? 260 : 300;
-        const compactMargin = isMobileViewport ? { t: 12, b: 28, l: 28, r: 12 } : null;
-        const compactAxis = isMobileViewport ? { tickfont: { size: 10 }, title: { font: { size: 11 } }, automargin: true } : {};
+        const baseHeight = 300;
+        const mapHeight = 300;
+        const compactMargin = null;
+        const compactAxis = {};
 
         const shouldRender = (key) => mountedChartKeys.includes(key);
 
@@ -1905,15 +1582,15 @@
           values: donorVolume.map((d) => Number(d.qty || 0)),
           textinfo: 'label+value',
           hovertemplate: '%{label}<br>Volume %{value} kg<extra></extra>',
-          marker: { colors: ['#22d3ee', '#34d399', '#60a5fa', '#f59e0b', '#f472b6', '#6366f1'] },
+          marker: { colors: isDark ? ['#22d3ee', '#34d399', '#60a5fa', '#f59e0b', '#f472b6', '#6366f1'] : ['#0e7490', '#166534', '#3b82f6', '#b45309', '#db2777', '#6366f1'] },
           branchvalues: 'total',
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
-          margin: isMobileViewport ? { t: 10, b: 4, l: 4, r: 4 } : { t: 20, b: 10, l: 10, r: 10 },
+          margin: { t: 20, b: 10, l: 10, r: 10 },
           height: baseHeight,
-          font: { color: '#e6fffb' },
-        }, { displayModeBar: false, responsive: true });
+          font: { color: isDark ? '#e6fffb' : '#111111' },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         const timeSensitive = rows.filter((r) => !r.is_claimed && Number(r.safe_hours) <= 8).length;
         const funnelStages = buildMonotonicFunnelStages([
@@ -1928,16 +1605,16 @@
           y: funnelStages.map((stage) => stage.label),
           x: funnelStages.map((stage) => stage.value),
           customdata: funnelStages.map((stage) => stage.rawValue),
-          marker: { color: ['#22d3ee', '#34d399', '#6366f1', '#fb7185'] },
+          marker: { color: isDark ? ['#22d3ee', '#34d399', '#6366f1', '#fb7185'] : ['#0e7490', '#166534', '#3b82f6', '#dc2626'] },
           textinfo: 'value+percent initial',
           hovertemplate: '%{y}<br>Listings %{x}<br>Recorded %{customdata}<extra></extra>',
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
-          margin: isMobileViewport ? { t: 12, b: 20, l: 74, r: 8 } : { t: 20, b: 20, l: 100, r: 20 },
+          margin: { t: 20, b: 20, l: 100, r: 20 },
           height: baseHeight,
-          font: { color: '#e6fffb', size: isMobileViewport ? 11 : 13 },
-        }, { displayModeBar: false, responsive: true });
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         if (shouldRender('bubble')) renderPlot(hostByKey.bubble, [{
           type: 'scatter',
@@ -1952,17 +1629,17 @@
             colorscale: 'Viridis',
             showscale: false,
             opacity: 0.75,
-            line: { width: 1, color: 'rgba(255,255,255,0.24)' },
+            line: { width: 1, color: isDark ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.2)' },
           },
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
           margin: compactMargin || { t: 20, b: 40, l: 45, r: 20 },
           height: baseHeight,
-          xaxis: { title: 'Temperature C', color: '#c4f1ff', gridcolor: 'rgba(255,255,255,0.08)', ...compactAxis },
-          yaxis: { title: 'Safe Hours', color: '#c4f1ff', gridcolor: 'rgba(255,255,255,0.08)', ...compactAxis },
-          font: { color: '#e6fffb', size: isMobileViewport ? 11 : 13 },
-        }, { displayModeBar: false, responsive: true });
+          xaxis: { title: 'Temperature C', color: axisColor, gridcolor: gridColor, ...compactAxis },
+          yaxis: { title: 'Safe Hours', color: axisColor, gridcolor: gridColor, ...compactAxis },
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         const tempBins = [0, 5, 10, 15, 20, 25, 30, 40, 60];
         const hourBins = [0, 2, 4, 6, 8, 12, 16, 20, 24];
@@ -1972,24 +1649,24 @@
           x: tempBins.slice(0, -1).map((v, i) => `${v}-${tempBins[i + 1]} C`),
           y: hourBins.slice(0, -1).map((v, i) => `${v}-${hourBins[i + 1]}h`),
           z,
-          colorscale: 'YlGnBu',
+          colorscale: isDark ? 'YlGnBu' : 'YlOrRd',
           showscale: false,
           hovertemplate: 'Temp %{x}<br>Hours %{y}<br>Listings %{z}<extra></extra>',
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
-          margin: isMobileViewport ? { t: 10, b: 46, l: 56, r: 10 } : { t: 20, b: 40, l: 70, r: 20 },
+          margin: { t: 20, b: 40, l: 70, r: 20 },
           height: baseHeight,
-          font: { color: '#e6fffb', size: isMobileViewport ? 10 : 13 },
-        }, { displayModeBar: false, responsive: true });
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         if (shouldRender('box')) renderPlot(hostByKey.box, [
           {
             type: 'box',
             name: 'Available',
             y: rows.filter((r) => !r.is_claimed).map((r) => Number(r.safe_hours || 0)),
-            marker: { color: '#34d399' },
-            line: { color: '#34d399' },
+            marker: { color: isDark ? '#34d399' : '#166534' },
+            line: { color: isDark ? '#34d399' : '#166534' },
             boxmean: true,
             hovertemplate: '%{x}<br>Safe hours %{y}<extra></extra>',
           },
@@ -1997,8 +1674,8 @@
             type: 'box',
             name: 'Claimed',
             y: rows.filter((r) => r.is_claimed).map((r) => Number(r.safe_hours || 0)),
-            marker: { color: '#22d3ee' },
-            line: { color: '#22d3ee' },
+            marker: { color: isDark ? '#22d3ee' : '#0e7490' },
+            line: { color: isDark ? '#22d3ee' : '#0e7490' },
             boxmean: true,
             hovertemplate: '%{x}<br>Safe hours %{y}<extra></extra>',
           },
@@ -2007,10 +1684,10 @@
           plot_bgcolor: 'transparent',
           margin: compactMargin || { t: 20, b: 40, l: 45, r: 20 },
           height: baseHeight,
-          yaxis: { title: 'Safe Hours', color: '#c4f1ff', gridcolor: 'rgba(255,255,255,0.08)', ...compactAxis },
-          xaxis: { color: '#c4f1ff', ...compactAxis },
-          font: { color: '#e6fffb', size: isMobileViewport ? 11 : 13 },
-        }, { displayModeBar: false, responsive: true });
+          yaxis: { title: 'Safe Hours', color: axisColor, gridcolor: gridColor, ...compactAxis },
+          xaxis: { color: axisColor, ...compactAxis },
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         const CHART_BASE = { lat: 20.2961, lng: 85.8245 };
         const cLats = rows.map((r) => r.donor_latitude  != null ? r.donor_latitude  : CHART_BASE.lat + (Math.random() - 0.5) * 0.18);
@@ -2027,7 +1704,7 @@
           hovertemplate: '%{text}<extra></extra>',
           marker: {
             size: rows.map((r) => Math.max(8, Math.min(18, Number(r.qty || 0) * 1.2))),
-            color: rows.map((r) => Number(r.safe_hours || 0) <= 3 ? '#fb7185' : '#34d399'),
+            color: rows.map((r) => Number(r.safe_hours || 0) <= 3 ? (isDark ? '#fb7185' : '#dc2626') : (isDark ? '#34d399' : '#166534')),
             opacity: 0.82,
           },
         }], {
@@ -2036,7 +1713,7 @@
           plot_bgcolor: 'transparent',
           height: mapHeight,
           margin: { t: 0, b: 0, l: 0, r: 0 },
-        }, { displayModeBar: false, responsive: true });
+        }, { displayModeBar: false, responsive: true }, theme);
 
         const topDonors = donorVolume.slice(0, 5);
         const topNgos = ngoClaims.slice(0, 5);
@@ -2048,8 +1725,8 @@
             fill: 'toself',
             name: 'Donor Volume',
             hovertemplate: '%{theta}<br>Donor volume %{r} kg<extra></extra>',
-            line: { color: '#34d399' },
-            fillcolor: 'rgba(52, 211, 153, 0.24)',
+            line: { color: isDark ? '#34d399' : '#166534' },
+            fillcolor: isDark ? 'rgba(52, 211, 153, 0.24)' : 'rgba(22, 101, 52, 0.24)',
           },
           {
             type: 'scatterpolar',
@@ -2058,22 +1735,22 @@
             fill: 'toself',
             name: 'NGO Claims',
             hovertemplate: '%{theta}<br>NGO claims %{r}<extra></extra>',
-            line: { color: '#22d3ee' },
-            fillcolor: 'rgba(34, 211, 238, 0.2)',
+            line: { color: isDark ? '#22d3ee' : '#0e7490' },
+            fillcolor: isDark ? 'rgba(34, 211, 238, 0.2)' : 'rgba(14, 116, 144, 0.2)',
           },
         ], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
-          margin: isMobileViewport ? { t: 12, b: 12, l: 16, r: 16 } : { t: 20, b: 20, l: 30, r: 30 },
+          margin: { t: 20, b: 20, l: 30, r: 30 },
           height: baseHeight,
-          font: { color: '#e6fffb', size: isMobileViewport ? 10 : 13 },
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
           polar: {
             bgcolor: 'transparent',
-            radialaxis: { gridcolor: 'rgba(255,255,255,0.08)', color: '#c4f1ff', tickfont: { size: isMobileViewport ? 9 : 11 } },
-            angularaxis: { gridcolor: 'rgba(255,255,255,0.08)', color: '#c4f1ff', tickfont: { size: isMobileViewport ? 9 : 11 } },
+            radialaxis: { gridcolor: gridColor, color: axisColor, tickfont: { size: 11 } },
+            angularaxis: { gridcolor: gridColor, color: axisColor, tickfont: { size: 11 } },
           },
-          legend: { orientation: 'h', y: isMobileViewport ? -0.2 : -0.1, font: { size: isMobileViewport ? 10 : 12 } },
-        }, { displayModeBar: false, responsive: true });
+          legend: { orientation: 'h', y: -0.1, font: { size: 12 } },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         if (shouldRender('waterfall')) renderPlot(hostByKey.waterfall, [{
           type: 'waterfall',
@@ -2081,19 +1758,19 @@
           y: [rows.length, -claimed, available, -urgent, Math.max(0, available - urgent)],
           measure: ['absolute', 'relative', 'relative', 'relative', 'total'],
           hovertemplate: '%{x}<br>Net change %{y}<extra></extra>',
-          connector: { line: { color: 'rgba(225,248,255,0.22)' } },
-          increasing: { marker: { color: '#34d399' } },
-          decreasing: { marker: { color: '#fb7185' } },
-          totals: { marker: { color: '#22d3ee' } },
+          connector: { line: { color: isDark ? 'rgba(225,248,255,0.22)' : 'rgba(0,0,0,0.16)' } },
+          increasing: { marker: { color: isDark ? '#34d399' : '#166534' } },
+          decreasing: { marker: { color: isDark ? '#fb7185' : '#dc2626' } },
+          totals: { marker: { color: isDark ? '#22d3ee' : '#0e7490' } },
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
           margin: compactMargin || { t: 20, b: 40, l: 45, r: 20 },
           height: baseHeight,
-          font: { color: '#e6fffb', size: isMobileViewport ? 10 : 13 },
-          yaxis: { color: '#c4f1ff', gridcolor: 'rgba(255,255,255,0.08)', ...compactAxis },
-          xaxis: { color: '#c4f1ff', tickangle: isMobileViewport ? -24 : 0, ...compactAxis },
-        }, { displayModeBar: false, responsive: true });
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+          yaxis: { color: axisColor, gridcolor: gridColor, ...compactAxis },
+          xaxis: { color: axisColor, tickangle: 0, ...compactAxis },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         const donorNames = donorVolume.slice(0, 5).map((d) => d.name);
         const ngoNames = ngoClaims.slice(0, 5).map((n) => n.name);
@@ -2114,29 +1791,35 @@
             label: [...donorNames, ...ngoNames],
             pad: 16,
             thickness: 16,
-            color: [...donorNames.map(() => '#34d399'), ...ngoNames.map(() => '#22d3ee')],
-            line: { color: 'rgba(255,255,255,0.2)', width: 1 },
+            color: [
+              ...donorNames.map(() => (isDark ? '#34d399' : '#166534')),
+              ...ngoNames.map(() => (isDark ? '#22d3ee' : '#0e7490')),
+            ],
+            line: { color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', width: 1 },
             hovertemplate: '%{label}<extra></extra>',
           },
           link: {
             source,
             target,
             value,
-            color: source.map((_, i) => i % 2 === 0 ? 'rgba(52, 211, 153, 0.28)' : 'rgba(34, 211, 238, 0.24)'),
+            color: source.map((_, i) => {
+              if (isDark) return i % 2 === 0 ? 'rgba(52, 211, 153, 0.28)' : 'rgba(34, 211, 238, 0.24)';
+              return i % 2 === 0 ? 'rgba(22, 101, 52, 0.24)' : 'rgba(14, 116, 144, 0.22)';
+            }),
             hovertemplate: '%{source.label} -> %{target.label}<br>Matched units %{value}<extra></extra>',
           },
         }], {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
-          margin: isMobileViewport ? { t: 12, b: 12, l: 8, r: 8 } : { t: 20, b: 20, l: 20, r: 20 },
+          margin: { t: 20, b: 20, l: 20, r: 20 },
           height: baseHeight,
-          font: { color: '#e6fffb', size: isMobileViewport ? 10 : 13 },
-        }, { displayModeBar: false, responsive: true });
+          font: { color: isDark ? '#e6fffb' : '#111111', size: 13 },
+        }, { displayModeBar: false, responsive: true }, theme);
 
         return () => chartCatalog.forEach((chart) => {
           if (chart.ref.current) purgePlot(chart.ref.current);
         });
-      }, [analytics, rows, isMobileViewport, activeMobileChart]);
+      }, [analytics, rows, theme, isDark, axisColor, gridColor]);
 
       return (
         <>
@@ -2159,55 +1842,20 @@
               <div className="col-lg-4"><KpiCard label="Best Next Step" value="Try Donor AI" icon="fas fa-magic" sub="visuals also embedded inside workflows" /></div>
             </div>
 
-            {!isMobileViewport && <RealtimeLeaderboard analytics={analytics} rows={rows} />}
+            <RealtimeLeaderboard analytics={analytics} rows={rows} />
 
-            {isMobileViewport ? (
-              <section className="visual-lab-mobile section-enter">
-                <div className="visual-lab-mobile-meta glass rounded-3xl p-4 mb-4">
-                  <div>
-                    <p className="visual-lab-mobile-kicker mb-2">Phone Lab Mode</p>
-                    <h4 className="fw-bold mb-2">One chart at a time, optimized for touch.</h4>
-                    <p className="mb-0 visual-lab-mobile-copy">Switch views from the chip rail below. This keeps the tab responsive, readable, and stable on phones.</p>
-                  </div>
-                </div>
-                <div className="visual-lab-chip-rail">
-                  {chartCatalog.map((chart) => (
-                    <button
-                      key={chart.key}
-                      className={`visual-lab-chip ${activeMobileChart === chart.key ? 'active' : ''}`}
-                      onClick={() => setActiveMobileChart(chart.key)}
-                    >
-                      {chart.title}
-                    </button>
-                  ))}
-                </div>
-                <div className="glass rounded-3xl p-4 visual-lab-mobile-card">
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div>
-                      <h4 className="fw-bold mb-1" style={{ color: '#22d3ee' }}>{activeChartMeta.title}</h4>
-                      <p className="small mb-0" style={{ color: '#e6fffb', opacity: 0.72 }}>{activeChartMeta.description}</p>
-                    </div>
-                    <span className="visual-lab-mobile-count">{chartCatalog.findIndex((chart) => chart.key === activeChartMeta.key) + 1}/{chartCatalog.length}</span>
-                  </div>
-                  <div className="visual-lab-plot-host" ref={activeChartMeta.ref}></div>
-                </div>
-              </section>
-            ) : (
-              <>
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Treemap</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Shows which donor groups contribute the most volume.</p><div ref={treemapRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Funnel</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Shows the rescue pipeline from listings to urgent cases.</p><div ref={funnelRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Bubble Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Temperature vs safe hours, with bubble size for donation quantity.</p><div ref={bubbleRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Heatmap</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Density of listings across temperature and age buckets.</p><div ref={heatmapRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Box Plot</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Distribution spread of safe hours for claimed vs available items.</p><div ref={boxRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Scatter Map</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Geographic pickup perspective for active marketplace items.</p><div ref={geoRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Radar Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Compares top donor volume vs top NGO claims in a radial score view.</p><div ref={radarRef}></div></div>
-                  <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Waterfall Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Tracks how total listings convert into claims, urgent cases, and remaining reserve.</p><div ref={waterfallRef}></div></div>
-                </div>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Treemap</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Shows which donor groups contribute the most volume.</p><div ref={treemapRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Funnel</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Shows the rescue pipeline from listings to urgent cases.</p><div ref={funnelRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Bubble Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Temperature vs safe hours, with bubble size for donation quantity.</p><div ref={bubbleRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Heatmap</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Density of listings across temperature and age buckets.</p><div ref={heatmapRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Box Plot</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Distribution spread of safe hours for claimed vs available items.</p><div ref={boxRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Scatter Map</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Geographic pickup perspective for active marketplace items.</p><div ref={geoRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Radar Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Compares top donor volume vs top NGO claims in a radial score view.</p><div ref={radarRef}></div></div>
+              <div className="glass rounded-3xl p-5"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Waterfall Chart</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Tracks how total listings convert into claims, urgent cases, and remaining reserve.</p><div ref={waterfallRef}></div></div>
+            </div>
 
-                <div className="glass rounded-3xl p-5 mt-4"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Sankey Flow</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Illustrative donor-to-NGO rescue flow showing how supply can move across the network.</p><div ref={sankeyRef}></div></div>
-              </>
-            )}
+            <div className="glass rounded-3xl p-5 mt-4"><h4 className="fw-bold mb-2" style={{ color: '#22d3ee' }}>Sankey Flow</h4><p className="small mb-3" style={{ color: '#e6fffb', opacity: 0.72 }}>Illustrative donor-to-NGO rescue flow showing how supply can move across the network.</p><div ref={sankeyRef}></div></div>
 
             <div className="glass rounded-3 p-4 mt-4 text-center">
               <p className="mb-3" style={{ color: '#e6fffb' }}>Want to see these visual ideas inside workflows too?</p>
@@ -2245,8 +1893,7 @@
       );
     }
 
-    function ChartPanel({ analytics }) {
-      const isMobileViewport = useIsMobile(860);
+    function ChartPanel({ analytics, theme = 'dark' }) {
       const donorCanvas = useRef(null);
       const ngoCanvas = useRef(null);
       const chartsRef = useRef([]);
@@ -2257,6 +1904,16 @@
       const totalDonorKg = donorVolume.reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const totalClaims = ngoClaims.reduce((sum, item) => sum + Number(item.claims || 0), 0);
 
+      const isDark = theme !== 'light';
+      const axisColor = isDark ? '#c4f1ff' : '#374151';
+      const gridColor = isDark ? 'rgba(180, 230, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+      const tooltipBg = isDark ? 'rgba(8, 14, 30, 0.94)' : 'rgba(255, 255, 255, 0.96)';
+      const tooltipTitle = isDark ? '#ecfeff' : '#111111';
+      const tooltipBody = isDark ? '#d9fdfa' : '#374151';
+      const legendColor = isDark ? '#e6fffb' : '#374151';
+      const borderColor = isDark ? 'rgba(186, 250, 239, 0.85)' : 'rgba(0, 0, 0, 0.2)';
+      const ngoBorderColor = isDark ? 'rgba(8, 14, 30, 0.82)' : 'rgba(255, 255, 255, 0.9)';
+
       useEffect(() => {
         chartsRef.current.forEach((c) => c && c.destroy());
         chartsRef.current = [];
@@ -2264,9 +1921,15 @@
 
         const donorCtx = donorCanvas.current.getContext('2d');
         const donorGradient = donorCtx.createLinearGradient(0, 0, 0, 220);
-        donorGradient.addColorStop(0, 'rgba(34, 211, 238, 0.95)');
-        donorGradient.addColorStop(0.5, 'rgba(52, 211, 153, 0.82)');
-        donorGradient.addColorStop(1, 'rgba(52, 211, 153, 0.24)');
+        if (isDark) {
+          donorGradient.addColorStop(0, 'rgba(34, 211, 238, 0.95)');
+          donorGradient.addColorStop(0.5, 'rgba(52, 211, 153, 0.82)');
+          donorGradient.addColorStop(1, 'rgba(52, 211, 153, 0.24)');
+        } else {
+          donorGradient.addColorStop(0, 'rgba(14, 116, 144, 0.95)');
+          donorGradient.addColorStop(0.5, 'rgba(22, 101, 52, 0.82)');
+          donorGradient.addColorStop(1, 'rgba(22, 101, 52, 0.24)');
+        }
 
         const donorChart = new Chart(donorCanvas.current, {
           type: 'bar',
@@ -2276,7 +1939,7 @@
               label: 'Donor Volume (kg)',
               data: donorVolume.map((d) => d.qty),
               backgroundColor: donorGradient,
-              borderColor: 'rgba(186, 250, 239, 0.85)',
+              borderColor,
               borderWidth: 1.2,
               borderRadius: 14,
               borderSkipped: false,
@@ -2289,23 +1952,23 @@
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: 'rgba(8, 14, 30, 0.94)',
-                borderColor: 'rgba(34, 211, 238, 0.28)',
+                backgroundColor: tooltipBg,
+                borderColor: isDark ? 'rgba(34, 211, 238, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                 borderWidth: 1,
-                titleColor: '#ecfeff',
-                bodyColor: '#d9fdfa',
+                titleColor: tooltipTitle,
+                bodyColor: tooltipBody,
                 padding: 12,
               },
             },
             scales: {
               x: {
-                ticks: { color: '#c4f1ff' },
+                ticks: { color: axisColor },
                 grid: { display: false },
               },
               y: {
                 beginAtZero: true,
-                ticks: { color: '#c4f1ff' },
-                grid: { color: 'rgba(180, 230, 255, 0.08)' },
+                ticks: { color: axisColor },
+                grid: { color: gridColor },
               },
             },
           },
@@ -2313,20 +1976,20 @@
 
         const ngoCtx = ngoCanvas.current.getContext('2d');
         const ngoGradientA = ngoCtx.createLinearGradient(0, 0, 220, 220);
-        ngoGradientA.addColorStop(0, '#22d3ee');
-        ngoGradientA.addColorStop(1, '#0891b2');
+        ngoGradientA.addColorStop(0, isDark ? '#22d3ee' : '#0e7490');
+        ngoGradientA.addColorStop(1, isDark ? '#0891b2' : '#155e75');
         const ngoGradientB = ngoCtx.createLinearGradient(0, 0, 220, 220);
-        ngoGradientB.addColorStop(0, '#34d399');
-        ngoGradientB.addColorStop(1, '#059669');
+        ngoGradientB.addColorStop(0, isDark ? '#34d399' : '#166534');
+        ngoGradientB.addColorStop(1, isDark ? '#059669' : '#14532d');
         const ngoGradientC = ngoCtx.createLinearGradient(0, 0, 220, 220);
-        ngoGradientC.addColorStop(0, '#60a5fa');
-        ngoGradientC.addColorStop(1, '#2563eb');
+        ngoGradientC.addColorStop(0, isDark ? '#60a5fa' : '#3b82f6');
+        ngoGradientC.addColorStop(1, isDark ? '#2563eb' : '#1d4ed8');
         const ngoGradientD = ngoCtx.createLinearGradient(0, 0, 220, 220);
-        ngoGradientD.addColorStop(0, '#f59e0b');
-        ngoGradientD.addColorStop(1, '#d97706');
+        ngoGradientD.addColorStop(0, isDark ? '#f59e0b' : '#b45309');
+        ngoGradientD.addColorStop(1, isDark ? '#d97706' : '#92400e');
         const ngoGradientE = ngoCtx.createLinearGradient(0, 0, 220, 220);
-        ngoGradientE.addColorStop(0, '#f472b6');
-        ngoGradientE.addColorStop(1, '#db2777');
+        ngoGradientE.addColorStop(0, isDark ? '#f472b6' : '#db2777');
+        ngoGradientE.addColorStop(1, isDark ? '#db2777' : '#9d174d');
 
         const ngoChart = new Chart(ngoCanvas.current, {
           type: 'doughnut',
@@ -2336,7 +1999,7 @@
               label: 'Claims',
               data: ngoClaims.map((n) => n.claims),
               backgroundColor: [ngoGradientA, ngoGradientB, ngoGradientC, ngoGradientD, ngoGradientE],
-              borderColor: 'rgba(8, 14, 30, 0.82)',
+              borderColor: ngoBorderColor,
               borderWidth: 4,
               hoverOffset: 8,
             }],
@@ -2349,20 +2012,20 @@
               legend: {
                 position: 'bottom',
                 labels: {
-                  color: '#e6fffb',
-                  padding: isMobileViewport ? 10 : 16,
+                  color: legendColor,
+                  padding: 16,
                   usePointStyle: true,
                   pointStyle: 'circle',
-                  boxWidth: isMobileViewport ? 8 : 12,
-                  font: { size: isMobileViewport ? 10 : 12 },
+                  boxWidth: 12,
+                  font: { size: 12 },
                 },
               },
               tooltip: {
-                backgroundColor: 'rgba(8, 14, 30, 0.94)',
-                borderColor: 'rgba(52, 211, 153, 0.28)',
+                backgroundColor: tooltipBg,
+                borderColor: isDark ? 'rgba(52, 211, 153, 0.28)' : 'rgba(0, 0, 0, 0.15)',
                 borderWidth: 1,
-                titleColor: '#ecfeff',
-                bodyColor: '#d9fdfa',
+                titleColor: tooltipTitle,
+                bodyColor: tooltipBody,
                 padding: 12,
               },
             },
@@ -2370,9 +2033,9 @@
         });
         chartsRef.current = [donorChart, ngoChart];
         return () => chartsRef.current.forEach((c) => c && c.destroy());
-      }, [analytics, isMobileViewport]);
+      }, [analytics, theme, isDark, axisColor, gridColor, tooltipBg, tooltipTitle, tooltipBody, legendColor, borderColor, ngoBorderColor]);
       return (
-        <section className={`section-enter grid lg:grid-cols-2 gap-6 mt-7 chart-panel-shell ${isMobileViewport ? 'is-mobile' : ''}`}>
+        <section className="section-enter grid lg:grid-cols-2 gap-6 mt-7 chart-panel-shell">
           <div className="glass rounded-3xl p-6 overflow-hidden chart-panel-card">
             <div className="d-flex justify-content-between align-items-start gap-3 mb-4">
               <div>
@@ -2483,7 +2146,6 @@
     }
 
     function ListingsTable({ rows, onRowUpdate, onClaim, onRetract }) {
-      const isMobileViewport = useIsMobile(860);
       const hostRef = useRef(null);
       const tableRef = useRef(null);
       const wrapRef = useRef(null);
@@ -2527,14 +2189,14 @@
 
         tableRef.current = new Tabulator(hostRef.current, {
           data: rows || [],
-          layout: isMobileViewport ? 'fitDataStretch' : 'fitColumns',
-          maxHeight: isMobileViewport ? '68vh' : '460px',
+          layout: 'fitColumns',
+          maxHeight: '460px',
           reactiveData: true,
-          movableColumns: !isMobileViewport,
-          responsiveLayout: isMobileViewport ? 'collapse' : false,
+          movableColumns: true,
+          responsiveLayout: false,
           pagination: true,
-          paginationSize: isMobileViewport ? 5 : 8,
-          columnDefaults: { headerWordWrap: true, resizable: !isMobileViewport },
+          paginationSize: 8,
+          columnDefaults: { headerWordWrap: true, resizable: true },
           columns,
           cellEdited: async (cell) => {
             if (!onRowUpdate) return;
@@ -2542,10 +2204,10 @@
             await onRowUpdate(row.id, { food_name: row.food_name, qty: row.qty, temp: row.temp, hours_ago: row.hours_ago, safe_hours: row.safe_hours });
           },
         });
-      }, [rows, isMobileViewport]);
+      }, [rows]);
       const downloadCsv = () => tableRef.current && tableRef.current.download('csv', 'foodsave_live_table.csv');
       const toggleFullscreen = () => { const el = wrapRef.current; if (!el) return; if (!document.fullscreenElement) el.requestFullscreen(); else document.exitFullscreen(); };
-      return <section ref={wrapRef} className={`section-enter glass rounded-3xl p-6 mt-7 listings-table-shell ${isMobileViewport ? 'is-mobile' : ''}`}><div className="flex flex-wrap items-center justify-between gap-3 mb-4 listings-table-head"><h3 className="text-xl font-bold">Realtime Showcase Table</h3><div className="flex gap-2 listings-table-actions"><button onClick={downloadCsv} className="px-4 py-2 rounded-xl bg-emerald-500/30">Download CSV</button><button onClick={toggleFullscreen} className="px-4 py-2 rounded-xl bg-cyan-500/30">Fullscreen</button></div></div><div ref={hostRef}></div></section>;
+      return <section ref={wrapRef} className="section-enter glass rounded-3xl p-6 mt-7 listings-table-shell"><div className="flex flex-wrap items-center justify-between gap-3 mb-4 listings-table-head"><h3 className="text-xl font-bold">Realtime Showcase Table</h3><div className="flex gap-2 listings-table-actions"><button onClick={downloadCsv} className="px-4 py-2 rounded-xl bg-emerald-500/30">Download CSV</button><button onClick={toggleFullscreen} className="px-4 py-2 rounded-xl bg-cyan-500/30">Fullscreen</button></div></div><div ref={hostRef}></div></section>;
     }
 
     function SettingsProfilePage({ user }) {
@@ -2557,10 +2219,7 @@
       useEffect(() => {
         const load = async () => {
           try {
-            const res = await fetch(`/api/settings/profile?username=${encodeURIComponent(user?.username || '')}`);
-            const data = await res.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Unable to load profile settings');
-            const s = data.settings || {};
+            const s = await fetchProfileSettings(user?.username || '', 'Unable to load profile settings');
             if (s.org_name) setOrgName(s.org_name);
             if (s.phone) setPhone(s.phone);
             if (s.avatar) setAvatar(s.avatar);
@@ -2574,9 +2233,11 @@
       const save = async (e) => {
         e.preventDefault();
         try {
-          const res = await fetch('/api/settings/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user.username, values: { org_name: orgName, phone, avatar, timezone } }) });
-          const data = await res.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to save profile settings');
+          const data = await saveProfileSettings(
+            user.username,
+            { org_name: orgName, phone, avatar, timezone },
+            'Unable to save profile settings'
+          );
           setSaveMsg(data.message || 'Saved');
         } catch (err) {
           setSaveMsg(err.message || 'Unable to save profile settings');
@@ -2655,10 +2316,7 @@
       useEffect(() => {
         const load = async () => {
           try {
-            const res = await fetch(`/api/settings/profile?username=${encodeURIComponent(user?.username || '')}`);
-            const data = await res.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Unable to load location settings');
-            const s = data.settings || {};
+            const s = await fetchProfileSettings(user?.username || '', 'Unable to load location settings');
             if (s.latitude !== undefined && s.latitude !== null) setLat(String(s.latitude));
             if (s.longitude !== undefined && s.longitude !== null) setLng(String(s.longitude));
             if (s.radius_km !== undefined && s.radius_km !== null) setRadius(Number(s.radius_km));
@@ -2670,9 +2328,11 @@
       }, [user]);
       const save = async () => {
         try {
-          const res = await fetch('/api/settings/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user.username, values: { latitude: parseFloat(lat), longitude: parseFloat(lng), radius_km: radius } }) });
-          const data = await res.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to save location settings');
+          const data = await saveProfileSettings(
+            user.username,
+            { latitude: parseFloat(lat), longitude: parseFloat(lng), radius_km: radius },
+            'Unable to save location settings'
+          );
           setMsg(data.message || 'Saved');
         } catch (err) {
           setMsg(err.message || 'Unable to save location settings');
@@ -2762,10 +2422,7 @@
       useEffect(() => {
         const load = async () => {
           try {
-            const res = await fetch(`/api/settings/profile?username=${encodeURIComponent(user?.username || '')}`);
-            const data = await res.json();
-            if (data.status !== 'success') throw new Error(data.message || 'Unable to load alert settings');
-            const s = data.settings || {};
+            const s = await fetchProfileSettings(user?.username || '', 'Unable to load alert settings');
             if (s.alert_email !== undefined) setEmailAlerts(Boolean(s.alert_email));
             if (s.alert_sms !== undefined) setSmsAlerts(Boolean(s.alert_sms));
             if (s.alert_critical !== undefined) setCriticalOnly(Boolean(s.alert_critical));
@@ -2778,9 +2435,16 @@
       }, [user]);
       const save = async () => {
         try {
-          const res = await fetch('/api/settings/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user.username, values: { alert_email: emailAlerts ? 1 : 0, alert_sms: smsAlerts ? 1 : 0, alert_critical: criticalOnly ? 1 : 0, risk_threshold: threshold } }) });
-          const data = await res.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to save alert settings');
+          const data = await saveProfileSettings(
+            user.username,
+            {
+              alert_email: emailAlerts ? 1 : 0,
+              alert_sms: smsAlerts ? 1 : 0,
+              alert_critical: criticalOnly ? 1 : 0,
+              risk_threshold: threshold,
+            },
+            'Unable to save alert settings'
+          );
           setMsg(data.message || 'Alerts saved');
         } catch (err) {
           setMsg(err.message || 'Unable to save alert settings');
@@ -2799,7 +2463,6 @@
         }
       });
       const [path, setPath] = useState(normalizeRoutePath(window.location.pathname));
-      const isMobileViewport = useIsMobile(860);
       const [ngoViewMode, setNgoViewMode] = useState(normalizeRoutePath(window.location.pathname) === '/ngo/map-view' ? 'map' : 'list');
       const [selectedNgoListing, setSelectedNgoListing] = useState(null);
       const [busy, setBusy] = useState(false);
@@ -2812,7 +2475,6 @@
       const [notifications, setNotifications] = useState([]);
       const [unreadCount, setUnreadCount] = useState(0);
       const [showNotifications, setShowNotifications] = useState(false);
-      const [showFiltersMobile, setShowFiltersMobile] = useState(false);
       const [foodFilters, setFoodFilters] = useState({ q: '', is_claimed: '', min_safe_hours: '', max_safe_hours: '' });
       const [activeChatFoodId, setActiveChatFoodId] = useState(null);
       const [chatThreads, setChatThreads] = useState([]);
@@ -2834,6 +2496,17 @@
         }
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       });
+      const [backgroundTheme, setBackgroundTheme] = useState(() => {
+        try {
+          const savedBackgroundTheme = localStorage.getItem('foodsave_bg_theme');
+          if (savedBackgroundTheme && BG_THEME_OPTIONS.some((opt) => opt.value === savedBackgroundTheme)) {
+            return savedBackgroundTheme;
+          }
+        } catch (_) {
+          // no-op
+        }
+        return 'aurora';
+      });
 
       const toggleTheme = () => {
         setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
@@ -2846,12 +2519,7 @@
       }, []);
 
       useEffect(() => {
-        if (!isMobileViewport) setShowFiltersMobile(false);
-      }, [isMobileViewport]);
-
-      useEffect(() => {
         // Route changes should clear temporary overlays/panels.
-        setShowFiltersMobile(false);
         setShowNotifications(false);
         if (path !== '/ngo/active-claims' && path !== '/donor/history') {
           setActiveChatFoodId(null);
@@ -2956,27 +2624,26 @@
         if (user && user.role === 'NGO') search.set('ngo_username', user.username);
         const suffix = search.toString() ? `?${search.toString()}` : '';
 
-        const [aRes, rowsRes] = await Promise.all([fetch('/api/analytics'), fetch(`/api/food/all${suffix}`)]);
-        const a = await aRes.json();
-        const r = await rowsRes.json();
-        if (a.status === 'success') setAnalytics(a);
-        if (r.status === 'success') setRows(r.food);
+        const [a, r] = await Promise.all([
+          apiGet('/api/analytics'),
+          apiGet(`/api/food/all${suffix}`),
+        ]);
+        setAnalytics(a);
+        setRows(r.food || []);
         if (user) {
-          const nRes = await fetch(`/api/notifications?username=${encodeURIComponent(user.username)}&role=${encodeURIComponent(user.role)}`);
-          const n = await nRes.json();
-          if (n.status === 'success') {
-            setNotifications(n.notifications || []);
-            setUnreadCount(n.unread_count || 0);
-          }
+          const n = await apiGet(`/api/notifications?username=${encodeURIComponent(user.username)}&role=${encodeURIComponent(user.role)}`);
+          setNotifications(n.notifications || []);
+          setUnreadCount(n.unread_count || 0);
         }
         if (user && user.role === 'ADMIN') {
-          const [uRes, lRes, aLogRes] = await Promise.all([fetch('/api/admin/users'), fetch('/api/admin/ai-logs'), fetch('/api/admin/audit-logs?limit=100')]);
-          const u = await uRes.json();
-          const l = await lRes.json();
-          const aLog = await aLogRes.json();
-          if (u.status === 'success') setAdminUsers(u.users);
-          if (l.status === 'success') setAdminLogs(l.logs);
-          if (aLog.status === 'success') setAuditLogs(aLog.logs || []);
+          const [u, l, aLog] = await Promise.all([
+            apiGet('/api/admin/users'),
+            apiGet('/api/admin/ai-logs'),
+            apiGet('/api/admin/audit-logs?limit=100'),
+          ]);
+          setAdminUsers(u.users || []);
+          setAdminLogs(l.logs || []);
+          setAuditLogs(aLog.logs || []);
         }
       };
 
@@ -2996,17 +2663,21 @@
       }, [theme]);
 
       useEffect(() => {
-        const mobileShellActive = Boolean(user && isMobileViewport);
-        document.body.classList.toggle('mobile-shell-active', mobileShellActive);
-        document.documentElement.classList.toggle('mobile-shell-active', mobileShellActive);
-        return () => {
-          document.body.classList.remove('mobile-shell-active');
-          document.documentElement.classList.remove('mobile-shell-active');
-        };
-      }, [user, isMobileViewport]);
+        document.body.setAttribute('data-bg-theme', backgroundTheme);
+        document.documentElement.setAttribute('data-bg-theme', backgroundTheme);
+        try {
+          localStorage.setItem('foodsave_bg_theme', backgroundTheme);
+        } catch (_) {
+          // no-op
+        }
+      }, [backgroundTheme]);
 
-      useEffect(() => { loadAll(); }, [user, foodFilters]);
-      useEffect(() => { const timer = setInterval(() => { if (user) loadAll(); }, 8000); return () => clearInterval(timer); }, [user, foodFilters]);
+      useEffect(() => {
+        loadAll();
+        if (!user) return undefined;
+        const timer = setInterval(() => { loadAll(); }, 8000);
+        return () => clearInterval(timer);
+      }, [user, foodFilters]);
 
       useEffect(() => {
         if (path === '/ngo/map-view') setNgoViewMode('map');
@@ -3034,15 +2705,12 @@
         try {
           const controller = new AbortController();
           const timeoutId = window.setTimeout(() => controller.abort(), 7000);
-          const response = await fetch('/api/auth/login', {
+          const data = await apiSend('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            body: { username, password },
             signal: controller.signal,
           });
           window.clearTimeout(timeoutId);
-          const data = await response.json();
-          if (!response.ok || data.status !== 'success') throw new Error(data.message || 'Login failed');
           setUser(data.user);
           const next = data.user.role === 'DONOR' ? '/donor/dashboard' : data.user.role === 'NGO' ? '/ngo/dashboard' : '/admin/overview';
           navigate(setPath, next);
@@ -3060,9 +2728,10 @@
         setBusy(true); setError('');
         try {
           const location_text = `${city}, Odisha`;
-          const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, role, city, location_text }) });
-          const data = await response.json();
-          if (!response.ok || data.status !== 'success') throw new Error(data.message || 'Registration failed');
+          const data = await apiSend('/api/auth/register', {
+            method: 'POST',
+            body: { username, password, role, city, location_text },
+          });
           setUser(data.user);
           const next = role === 'DONOR' ? '/donor/dashboard' : role === 'NGO' ? '/ngo/dashboard' : '/admin/overview';
           navigate(setPath, next);
@@ -3071,21 +2740,17 @@
       };
 
       const forgot = async (username) => {
-        const response = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
-        const data = await response.json();
+        const data = await apiSend('/api/auth/forgot-password', { method: 'POST', body: { username } });
         setError(data.message || 'Reset flow triggered');
       };
 
       const resetPassword = async (token, newPassword) => {
         setBusy(true); setError('');
         try {
-          const response = await fetch('/api/auth/reset-password', {
+          const data = await apiSend('/api/auth/reset-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token, new_password: newPassword }),
+            body: { token, new_password: newPassword },
           });
-          const data = await response.json();
-          if (!response.ok || data.status !== 'success') throw new Error(data.message || 'Password reset failed');
           setError(data.message || 'Password reset successful. Please sign in.');
           navigate(setPath, '/login');
         } catch (err) {
@@ -3096,13 +2761,12 @@
       };
 
       const updateRow = async (foodId, updates) => {
-        await fetch(`/api/food/${foodId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates }) });
+        await apiSend(`/api/food/${foodId}`, { method: 'PUT', body: { updates } });
         loadAll();
       };
 
       const adminUpdateUser = async (userId, action) => {
-        const res = await fetch(`/api/admin/users/${userId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
-        const data = await res.json();
+        const data = await apiSend(`/api/admin/users/${userId}/status`, { method: 'PATCH', body: { action } });
         if (data.status === 'success') {
           // Optimistic UI update - apply change immediately before full reload
           setAdminUsers(prev => prev.map(u => {
@@ -3121,8 +2785,7 @@
 
       const claimFood = async (foodId) => {
         if (!user) return;
-        const response = await fetch(`/api/food/${foodId}/claim`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claimed_by: user.username }) });
-        const data = await response.json();
+        const data = await apiSend(`/api/food/${foodId}/claim`, { method: 'POST', body: { claimed_by: user.username } });
         if (data.status === 'success') {
           await loadAll();
           navigate(setPath, '/ngo/active-claims');
@@ -3133,20 +2796,18 @@
 
       const markNotificationRead = async (notificationId) => {
         if (!user) return;
-        await fetch(`/api/notifications/${notificationId}/read`, {
+        await apiSend(`/api/notifications/${notificationId}/read`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: user.username, role: user.role }),
+          body: { username: user.username, role: user.role },
         });
         loadAll();
       };
 
       const markAllNotificationsRead = async () => {
         if (!user) return;
-        await fetch('/api/notifications/read-all', {
+        await apiSend('/api/notifications/read-all', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: user.username, role: user.role }),
+          body: { username: user.username, role: user.role },
         });
         loadAll();
       };
@@ -3154,11 +2815,7 @@
       const handleLogout = async () => {
         try {
           if (user?.username) {
-            await fetch('/api/auth/logout', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ username: user.username }),
-            });
+            await apiSend('/api/auth/logout', { method: 'POST', body: { username: user.username } });
           }
         } catch (_) {
           // no-op: client logout should still proceed
@@ -3309,9 +2966,7 @@
       const syncChatThreads = async ({ silent = false } = {}) => {
         if (!user) return [];
         try {
-          const response = await fetch(`/api/chats?username=${encodeURIComponent(user.username)}`);
-          const data = await response.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to load conversations');
+          const data = await apiGet(`/api/chats?username=${encodeURIComponent(user.username)}`);
           const nextThreads = data.threads || [];
           setChatThreads((currentThreads) => (areThreadsEquivalent(currentThreads, nextThreads) ? currentThreads : nextThreads));
           return nextThreads;
@@ -3346,9 +3001,7 @@
         try {
           const params = new URLSearchParams({ username: user.username, limit: '120' });
           if (incremental && chatLastSeenId) params.set('since_id', String(chatLastSeenId));
-          const response = await fetch(`/api/food/${foodId}/chat?${params.toString()}`);
-          const data = await response.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to load chat');
+          const data = await apiGet(`/api/food/${foodId}/chat?${params.toString()}`);
 
           const nextMessages = data.messages || [];
           const nextStatusUpdates = data.status_updates || [];
@@ -3414,13 +3067,10 @@
         setChatMessages((currentMessages) => mergeChatMessages(currentMessages, [optimisticMessage], []));
 
         try {
-          const response = await fetch(`/api/food/${activeChatFoodId}/chat`, {
+          const data = await apiSend(`/api/food/${activeChatFoodId}/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user.username, message, client_nonce: clientNonce }),
+            body: { username: user.username, message, client_nonce: clientNonce },
           });
-          const data = await response.json();
-          if (data.status !== 'success') throw new Error(data.message || 'Unable to send message');
 
           setChatMessages((currentMessages) => {
             const withoutOptimistic = currentMessages.filter((entry) => entry.client_nonce !== clientNonce && entry.id !== optimisticMessage.id);
@@ -3639,8 +3289,7 @@
               }
 
               try {
-                const response = await fetch('/api/cities');
-                const data = await response.json();
+                const data = await apiGet('/api/cities');
                 const cities = Array.isArray(data?.cities) ? data.cities : [];
 
                 if (!cities.length) {
@@ -3955,68 +3604,6 @@
 
       const FilterBar = () => {
         const resetFilters = () => setFoodFilters({ q: '', is_claimed: '', min_safe_hours: '', max_safe_hours: '' });
-        const activeFilterCount = Object.values(foodFilters).filter((value) => String(value || '').trim() !== '').length;
-        const filterFields = (
-          <>
-            <div>
-              <label className="small fw-bold d-block mb-2" style={{ color: '#22d3ee' }}>Search</label>
-              <input placeholder="Search food name..." value={foodFilters.q} onChange={(e) => setFoodFilters((f) => ({ ...f, q: e.target.value }))} className="form-control" />
-            </div>
-            <div>
-              <label className="small fw-bold d-block mb-2" style={{ color: '#22d3ee' }}>Claim status</label>
-              <select value={foodFilters.is_claimed} onChange={(e) => setFoodFilters((f) => ({ ...f, is_claimed: e.target.value }))} className="form-select"><option value="">All</option><option value="0">Unclaimed</option><option value="1">Claimed</option></select>
-            </div>
-            <div>
-              <label className="small fw-bold d-block mb-2" style={{ color: '#22d3ee' }}>Minimum safe hours</label>
-              <input type="number" placeholder="Min safe h" value={foodFilters.min_safe_hours} onChange={(e) => setFoodFilters((f) => ({ ...f, min_safe_hours: e.target.value }))} className="form-control" />
-            </div>
-            <div>
-              <label className="small fw-bold d-block mb-2" style={{ color: '#22d3ee' }}>Maximum safe hours</label>
-              <input type="number" placeholder="Max safe h" value={foodFilters.max_safe_hours} onChange={(e) => setFoodFilters((f) => ({ ...f, max_safe_hours: e.target.value }))} className="form-control" />
-            </div>
-          </>
-        );
-
-        if (isMobileViewport) {
-          return (
-            <>
-              <section className="glass rounded-3xl p-3 mt-4 mb-4 mobile-filter-trigger">
-                <div>
-                  <p className="mobile-filter-label mb-1">Marketplace filters</p>
-                  <p className="mobile-filter-summary mb-0">
-                    {activeFilterCount > 0 ? `${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}` : 'Search, claim status, and safe-hour range'}
-                  </p>
-                </div>
-                <button className="btn btn-info mobile-filter-button" onClick={() => setShowFiltersMobile(true)}>
-                  <i className="fas fa-sliders-h me-2"></i>Filters
-                  {activeFilterCount > 0 && <span className="mobile-filter-count">{activeFilterCount}</span>}
-                </button>
-              </section>
-
-              {showFiltersMobile && (
-                <div className="mobile-filter-backdrop" onClick={() => setShowFiltersMobile(false)}>
-                  <div className="mobile-filter-sheet" onClick={(e) => e.stopPropagation()}>
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <div>
-                        <p className="mobile-filter-label mb-1">Adaptive filter sheet</p>
-                        <h5 className="mb-0">Refine listings</h5>
-                      </div>
-                      <button className="btn btn-sm btn-outline-light" onClick={() => setShowFiltersMobile(false)}>Close</button>
-                    </div>
-                    <div className="mobile-filter-stack">
-                      {filterFields}
-                    </div>
-                    <div className="d-flex gap-2 mt-3">
-                      <button className="btn btn-secondary flex-fill" onClick={resetFilters}>Reset</button>
-                      <button className="btn btn-info flex-fill" onClick={() => setShowFiltersMobile(false)}>Apply</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          );
-        }
-
         return (
           <section className="glass rounded-3xl p-4 mt-4 mb-4">
             <div className="row g-2 align-items-end">
@@ -4052,6 +3639,8 @@
                 unreadCount={unreadCount}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                backgroundTheme={backgroundTheme}
+                onBackgroundThemeChange={setBackgroundTheme}
                 onLogout={handleLogout}
                 onOpenNotifications={() => setShowNotifications((v) => !v)}
               />
@@ -4062,23 +3651,13 @@
                 unreadCount={unreadCount}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                backgroundTheme={backgroundTheme}
+                onBackgroundThemeChange={setBackgroundTheme}
                 onOpenNotifications={() => setShowNotifications((v) => !v)}
                 onLogout={() => {}}
               />
           }
-          {user && isMobileViewport && (
-            <MobileAppTopBar
-              user={user}
-              path={path}
-              setPath={setPath}
-              unreadCount={unreadCount}
-              onOpenNotifications={() => setShowNotifications((v) => !v)}
-              onToggleTheme={toggleTheme}
-              theme={theme}
-              onLogout={handleLogout}
-            />
-          )}
-          <main id="main-content" className={user ? `app-sidebar-main ${isMobileViewport ? 'mobile-main-padding mobile-app-main' : ''}` : `container-xxl py-4${PUBLIC_ROUTES.includes(path) ? ' universal-layout' : ''}`}>
+          <main id="main-content" className={user ? 'app-sidebar-main' : `container-xxl py-4${PUBLIC_ROUTES.includes(path) ? ' universal-layout' : ''}`}>
             <div id="route-content" className={`${user ? '' : 'container '}route-content route-enter`}>
 
             {user && showNotifications && <section className="glass rounded-3xl p-4 mb-4"><div className="d-flex justify-content-between align-items-center mb-2"><h5 className="mb-0">Notifications</h5><div className="d-flex gap-2"><button className="btn btn-sm btn-outline-light" disabled={unreadCount === 0} onClick={markAllNotificationsRead}>Read All</button><button className="btn btn-sm btn-outline-light" onClick={() => setShowNotifications(false)}>Close</button></div></div><div className="space-y-2">{notifications.length === 0 && <p className="mb-0">No notifications yet.</p>}{notifications.slice(0, 20).map((n) => <div key={n.id} className="glass rounded-xl p-3 d-flex justify-content-between align-items-center"><div><p className="mb-1 fw-bold">{n.title}</p><p className="mb-0 small">{n.message}</p></div><button className="btn btn-sm btn-info" disabled={n.is_read} onClick={() => markNotificationRead(n.id)}>{n.is_read ? 'Read' : 'Mark read'}</button></div>)}</div></section>}
@@ -4092,7 +3671,7 @@
             {path === '/about' && <PublicAboutPage setPath={setPath} />}
 
             {path === '/impact' && <PublicImpactPage setPath={setPath} />}
-            {user && path === '/visualizations' && <VisualizationLab analytics={analytics} rows={rows} setPath={setPath} user={user} />}
+            {user && path === '/visualizations' && <VisualizationLab analytics={analytics} rows={rows} setPath={setPath} user={user} theme={theme} />}
             {path === '/leaderboard' && <>
               <section id="leaderboard-hero" className="glass rounded-3xl p-4 mb-4 wow fadeInDown section-enter" data-wow-delay="0.08s">
                 <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -4274,7 +3853,7 @@
               <PortalRoleLeaderboard role="DONOR" user={user} analytics={analytics} rows={rows} donorRows={donorRows} ngoRows={ngoRows} adminUsers={adminUsers} />
             </>}
             {user && path === '/donor/donate' && <InfoPage title="/donor/donate" subtitle="AI Wizard"><AIWizard user={user} onSubmit={loadAll} onError={setError} /></InfoPage>}
-            {user && path === '/donor/active' && <InfoPage title="/donor/active" subtitle="Inventory waiting for claim"><div className="glass rounded-3 p-4 mb-4"><h5 className="fw-bold mb-2" style={{ color: '#22d3ee' }}><i className="fas fa-clipboard-check me-2"></i>Active Donation Inventory</h5><p className="mb-0" style={{ color: '#e6fffb' }}>These listings are currently visible to NGOs. Keep details updated for faster claims and pickup coordination.</p></div><ListingsTable rows={donorRows.filter((r) => !r.is_claimed)} onRowUpdate={updateRow} onRetract={async (id) => { const r = await fetch(`/api/food/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ donor_name: user.username }) }); const d = await r.json(); if (d.status === 'success') await loadAll(); else setError(d.message || 'Retract failed'); }} /></InfoPage>}
+            {user && path === '/donor/active' && <InfoPage title="/donor/active" subtitle="Inventory waiting for claim"><div className="glass rounded-3 p-4 mb-4"><h5 className="fw-bold mb-2" style={{ color: '#22d3ee' }}><i className="fas fa-clipboard-check me-2"></i>Active Donation Inventory</h5><p className="mb-0" style={{ color: '#e6fffb' }}>These listings are currently visible to NGOs. Keep details updated for faster claims and pickup coordination.</p></div><ListingsTable rows={donorRows.filter((r) => !r.is_claimed)} onRowUpdate={updateRow} onRetract={async (id) => { const d = await apiSend(`/api/food/${id}`, { method: 'DELETE', body: { donor_name: user.username } }); if (d.status === 'success') await loadAll(); else setError(d.message || 'Retract failed'); }} /></InfoPage>}
             {user && path === '/donor/history' && (
               <InfoPage title="/donor/history" subtitle="Past donations">
                 <div className="glass rounded-3 p-4 mb-4">
@@ -4385,36 +3964,33 @@
               return (
                 <InfoPage title={isMap ? '/ngo/map-view' : '/ngo/live-feed'} subtitle="Adaptive Rescue Workspace">
                   <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <div className="portal-subtext" style={{ marginTop: 0 }}>Desktop: list + map split-pane. Mobile: toggle between list and map.</div>
-                    {!isMobileViewport && (
-                      <div className="d-flex gap-2">
-                        <button className="btn btn-sm btn-outline-light" onClick={() => setNgoViewMode('list')}>
-                          <i className="fas fa-list me-1"></i>List
-                        </button>
-                        <button className="btn btn-sm btn-outline-light" onClick={() => setNgoViewMode('map')}>
-                          <i className="fas fa-map me-1"></i>Map
-                        </button>
-                      </div>
-                    )}
+                    <div className="portal-subtext" style={{ marginTop: 0 }}>List + map split-pane for live coordination.</div>
+                    <div className="d-flex gap-2">
+                      <button className="btn btn-sm btn-outline-light" onClick={() => setNgoViewMode('list')}>
+                        <i className="fas fa-list me-1"></i>List
+                      </button>
+                      <button className="btn btn-sm btn-outline-light" onClick={() => setNgoViewMode('map')}>
+                        <i className="fas fa-map me-1"></i>Map
+                      </button>
+                    </div>
                   </div>
 
-                  {!isMobileViewport && (
-                    <div className="ngo-split-pane">
-                      <div className="ngo-split-list glass">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                          <h6 className="mb-0" style={{ color: '#22d3ee' }}>Incoming Listings</h6>
-                          <span className="small" style={{ color: 'rgba(225,248,255,0.55)' }}>{liveRows.length} live</span>
-                        </div>
-                        <div className="ngo-card-stack">
-                          {liveRows.length === 0 && <p className="mb-0 small" style={{ color: 'rgba(225,248,255,0.55)' }}>No listings available right now.</p>}
-                          {liveRows.map((r) => (
-                            <div
-                              key={r.id}
-                              className={`ngo-feed-card ${selectedNgoListing?.id === r.id ? 'active' : ''}`}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => setSelectedNgoListing(r)}
-                            >
+                  <div className="ngo-split-pane">
+                    <div className="ngo-split-list glass">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="mb-0" style={{ color: '#22d3ee' }}>Incoming Listings</h6>
+                        <span className="small" style={{ color: 'rgba(225,248,255,0.55)' }}>{liveRows.length} live</span>
+                      </div>
+                      <div className="ngo-card-stack">
+                        {liveRows.length === 0 && <p className="mb-0 small" style={{ color: 'rgba(225,248,255,0.55)' }}>No listings available right now.</p>}
+                        {liveRows.map((r) => (
+                          <div
+                            key={r.id}
+                            className={`ngo-feed-card ${selectedNgoListing?.id === r.id ? 'active' : ''}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedNgoListing(r)}
+                          >
                               <div className="d-flex justify-content-between align-items-center mb-1">
                                 <strong>{r.food_name}</strong>
                                 <span className="badge" style={{ background: getSafeHoursTone(Number(r.safe_hours || 0)).bg, color: getSafeHoursTone(Number(r.safe_hours || 0)).text, border: `1px solid ${getSafeHoursTone(Number(r.safe_hours || 0)).border}` }}>{Number(r.safe_hours || 0).toFixed(1)}h</span>
@@ -4433,39 +4009,10 @@
                         <NGOMapView rows={liveRows} />
                       </div>
                     </div>
-                  )}
-
-                  {isMobileViewport && (
-                    <>
-                      <div className="ngo-mobile-toggle-pill">
-                        <button className={`ngo-pill-btn ${!isMap ? 'active' : ''}`} onClick={() => { setNgoViewMode('list'); navigate(setPath, '/ngo/live-feed'); }}>List</button>
-                        <button className={`ngo-pill-btn ${isMap ? 'active' : ''}`} onClick={() => { setNgoViewMode('map'); navigate(setPath, '/ngo/map-view'); }}>Map</button>
-                      </div>
-
-                      {!isMap ? (
-                        <div className="ngo-card-stack mt-3">
-                          {liveRows.map((r) => (
-                            <div key={r.id} className="ngo-feed-card" role="button" tabIndex={0} onClick={() => setSelectedNgoListing(r)}>
-                              <div className="d-flex justify-content-between align-items-center mb-1">
-                                <strong>{r.food_name}</strong>
-                                <span className="badge" style={{ background: getSafeHoursTone(Number(r.safe_hours || 0)).bg, color: getSafeHoursTone(Number(r.safe_hours || 0)).text, border: `1px solid ${getSafeHoursTone(Number(r.safe_hours || 0)).border}` }}>{Number(r.safe_hours || 0).toFixed(1)}h</span>
-                              </div>
-                              <p className="mb-1 small" style={{ color: 'rgba(225,248,255,0.6)' }}>{r.donor_name} • Qty {r.qty}</p>
-                              <small style={{ color: '#22d3ee' }}>Tap for details</small>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="mt-3">
-                          <NGOMapView rows={liveRows} />
-                        </div>
-                      )}
-                    </>
-                  )}
 
                   {selectedNgoListing && (
-                    <div className={isMobileViewport ? 'ngo-bottom-sheet-backdrop' : 'ngo-drawer-backdrop'} onClick={() => setSelectedNgoListing(null)}>
-                      <div className={isMobileViewport ? 'ngo-bottom-sheet' : 'ngo-detail-drawer'} onClick={(e) => e.stopPropagation()}>
+                    <div className="ngo-drawer-backdrop" onClick={() => setSelectedNgoListing(null)}>
+                      <div className="ngo-detail-drawer" onClick={(e) => e.stopPropagation()}>
                         <div className="d-flex justify-content-between align-items-start mb-2">
                           <h5 className="mb-0" style={{ color: '#ecfeff' }}>{selectedNgoListing.food_name}</h5>
                           <button className="btn btn-sm btn-outline-light" onClick={() => setSelectedNgoListing(null)}><i className="fas fa-times"></i></button>
@@ -4601,12 +4148,9 @@
               </section>
             )}
 
-            {user && !['/donor/dashboard', '/ngo/dashboard'].includes(path) && <section className="mt-5 wow fadeInUp" data-wow-delay="0.3s"><ChartPanel analytics={analytics} /></section>}
+            {user && !['/donor/dashboard', '/ngo/dashboard'].includes(path) && <section className="mt-5 wow fadeInUp" data-wow-delay="0.3s"><ChartPanel analytics={analytics} theme={theme} /></section>}
             </div>
           </main>
-          {user && isMobileViewport && (
-            <MobileBottomNav user={user} path={path} setPath={setPath} unreadCount={unreadCount} />
-          )}
         </div>
       );
     }

@@ -1,14 +1,14 @@
 """
 Seed script for FoodSave hybrid app.
 Adds test users (admin, donors, NGOs) and realistic food listings.
-Run once before testing: python seed_db.py
+Run once before testing: python scripts/seed_db.py
 """
 import sqlite3
 import random
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "foodsave.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "foodsave.db"
 
 # (username, password, role, is_verified, is_banned, city)
 TEST_USERS = [

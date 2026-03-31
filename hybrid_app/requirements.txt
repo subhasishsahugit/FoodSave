@@ -3,7 +3,6 @@ flask>=3.0,<4
 pandas>=2.2,<3
 numpy>=2.0,<3
 scikit-learn>=1.6,<2
-plotly>=6.0,<7
 
 # Frontend visualization dependencies used by templates/index.html
 # These are loaded via CDN in the browser, not installed by pip:
