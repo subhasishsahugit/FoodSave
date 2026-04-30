@@ -47,11 +47,66 @@ Unlike standard donation platforms, **FoodSave integrates a Machine Learning mod
 
 ---
 
-<!-- Mermaid support for GitHub Pages (Jekyll) -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>
-  mermaid.initialize({ startOnLoad: true });
-</script>
+## ⚙️ Getting Started
+
+### Prerequisites
+
+- **Python** 3.10+
+- **Node.js** 18+ & npm
+- **PostgreSQL** 14+
+
+### Backend Setup
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your PostgreSQL credentials and SECRET_KEY
+
+# Apply migrations and start the server
+python manage.py migrate
+python manage.py runserver
+```
+
+### Frontend Setup
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env to set VITE_API_BASE_URL to your Django server URL
+
+# Start the development server
+npm run dev
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please fork the repository, create a feature branch, and open a pull request.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+---
 
 ## 🏗️ System Architecture
 
