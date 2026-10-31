@@ -5,10 +5,17 @@ Run once before testing: python scripts/seed_db.py
 """
 import sqlite3
 import random
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "data" / "foodsave.db"
+
+# Reuse the app's schema initializer so seeding also works on a brand-new
+# database (fresh clone, CI, or a cold deploy) instead of assuming the
+# tables already exist.
+sys.path.insert(0, str(BASE_DIR))
+from app import init_db  # noqa: E402
 
 # (username, password, role, is_verified, is_banned, city)
 TEST_USERS = [
@@ -84,6 +91,7 @@ CLAIM_MAP = {
 
 
 def seed_db():
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
