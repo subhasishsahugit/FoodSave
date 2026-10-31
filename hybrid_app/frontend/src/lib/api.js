@@ -1,6 +1,10 @@
 /**
  * Thin fetch wrapper. Rejects on non-2xx or a non-success status so callers
  * can treat a resolved promise as "it worked".
+ *
+ * When the SPA is hosted separately from Flask (e.g. GitHub Pages), set
+ * VITE_API_BASE_URL at build time to the backend origin. Empty means
+ * same-origin, which is what local development uses.
  */
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 

@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  // GitHub Pages project sites live under /<repo>/, so the deploy workflow
+  // sets VITE_BASE_PATH. Local dev and same-origin builds stay at "/".
   base: process.env.VITE_BASE_PATH || '/',
   plugins: [react(), tailwindcss()],
   resolve: {

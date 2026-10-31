@@ -61,6 +61,28 @@ def ensure_utf8_response(response):
     return response
 
 
+@app.after_request
+def add_cors_headers(response):
+    """Allow the SPA to be hosted on a different origin (e.g. GitHub Pages).
+
+    Set ALLOWED_ORIGINS to a comma-separated list to restrict it; defaults to
+    the project's Pages origin so a stray website cannot call the API.
+    """
+    origin = request.headers.get("Origin", "")
+    allowed = os.environ.get(
+        "ALLOWED_ORIGINS",
+        "https://subhasishsahugit.github.io,http://localhost:5173,http://127.0.0.1:5173",
+    )
+    allowed_set = {item.strip() for item in allowed.split(",") if item.strip()}
+    if origin and (origin in allowed_set or "*" in allowed_set):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Max-Age"] = "86400"
+    return response
+
+
 def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row

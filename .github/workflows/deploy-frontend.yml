@@ -1,0 +1,74 @@
+name: Deploy frontend to GitHub Pages
+
+# Builds the React SPA and publishes it as a static site. The Flask API is
+# deployed separately; set the repository variable VITE_API_BASE_URL to its
+# public origin so the Pages build knows where to send requests.
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; newer pushes supersede queued ones.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: hybrid_app/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: hybrid_app/frontend
+        run: npm ci
+
+      - name: Build static site
+        working-directory: hybrid_app/frontend
+        env:
+          # Project sites are served from https://<owner>.github.io/<repo>/
+          VITE_BASE_PATH: /FoodSave/
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Add SPA fallback and disable Jekyll
+        working-directory: hybrid_app/web/dist
+        run: |
+          cp index.html 404.html
+          touch .nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: hybrid_app/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
