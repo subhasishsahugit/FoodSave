@@ -1,5 +1,6 @@
 # Python runtime dependencies
 flask>=3.0,<4
+gunicorn>=21.2,<24
 pandas>=2.2,<3
 numpy>=2.0,<3
 scikit-learn>=1.6,<2

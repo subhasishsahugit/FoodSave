@@ -1,0 +1,1287 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   Apple Human Interface Guidelines — design tokens
+
+   Colour maps to the iOS/macOS system palette (systemBackground,
+   label, separator, systemBlue, the fill ramp). Type follows the
+   SF Pro optical-size model: SF Text below 20pt, SF Display at
+   20pt and above, with the tracking table that makes the
+   transition between them invisible. Spacing, radii, touch
+   targets and list metrics follow the HIG scale.
+   ============================================================ */
+
+:root {
+  /* Corner radius — HIG's continuous-corner family */
+  --hig-radius: 0.625rem; /* 10px small control */
+  --hig-radius-md: 0.6875rem; /* 11px field */
+  --hig-radius-lg: 0.75rem; /* 12px card / group */
+  --hig-radius-xl: 0.875rem; /* 14px sheet */
+  --hig-radius-2xl: 1rem; /* 16px panel */
+  --hig-radius-full: 62.5rem; /* capsule / pill */
+
+  /* Touch targets — HIG: 44pt minimum, 48 comfortable */
+  --hig-tap-min: 2.75rem;
+  --hig-tap-comfortable: 3rem;
+
+  /* Materials — vibrancy is approximated with translucency + blur */
+  --hig-material-thickness: 1px;
+  --hig-blur: saturate(180%) blur(20px);
+
+  /* Motion — Apple's spring-ish curves */
+  --hig-dur-quick: 150ms;
+  --hig-dur-standard: 250ms;
+  --hig-dur-slow: 400ms;
+  --hig-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* shadcn bridge radius */
+  --radius: 0.625rem;
+
+  /* Surfaces — light */
+  --background: oklch(1 0 0); /* systemBackground */
+  --foreground: oklch(0 0 0); /* label */
+  --card: oklch(1 0 0); /* secondarySystemGroupedBackground */
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(0.985 0 0);
+  --popover-foreground: oklch(0 0 0);
+
+  --muted: oklch(0.949 0.004 286); /* secondarySystemBackground #F2F2F7 */
+  --muted-foreground: oklch(0.439 0.003 286); /* secondaryLabel #6E6E73 */
+
+  --primary: oklch(0.562 0.222 260); /* systemBlue #007AFF */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.949 0.004 286);
+  --secondary-foreground: oklch(0 0 0);
+  --accent: oklch(0.937 0.005 286); /* tertiarySystemFill */
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.636 0.241 25); /* systemRed #FF3B30 */
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.812 0.004 286); /* opaqueSeparator #C6C6C8 */
+  --input: oklch(0.812 0.004 286);
+  --ring: oklch(0.562 0.222 260);
+
+  /* Hairline separator — the true iOS separator colour */
+  --hig-separator: oklch(0.55 0.006 286 / 0.29);
+  --hig-opaque-separator: oklch(0.812 0.004 286);
+  --hig-fill: oklch(0.55 0.006 286 / 0.2);
+  --hig-fill-secondary: oklch(0.55 0.006 286 / 0.16);
+  --hig-fill-tertiary: oklch(0.55 0.006 286 / 0.12);
+  --hig-fill-quaternary: oklch(0.55 0.006 286 / 0.08);
+  --hig-bar: oklch(0.55 0.006 286 / 0.12);
+
+  /* Segmented control: the selected segment is always the more
+     prominent one — white on a grey track in light mode, a lifted
+     grey on a darker track in dark mode. */
+  --hig-segment-track: oklch(0.55 0.006 286 / 0.12);
+  --hig-segment-active: oklch(1 0 0);
+
+  /* Sidebar / toolbar material */
+  --sidebar: oklch(0.949 0.004 286);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0.562 0.222 260);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.55 0.006 286 / 0.12);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0.55 0.006 286 / 0.29);
+  --sidebar-ring: oklch(0.562 0.222 260);
+
+  /* System palette — charts and semantics */
+  --chart-1: oklch(0.562 0.222 260); /* systemBlue */
+  --chart-2: oklch(0.627 0.194 149); /* systemGreen */
+  --chart-3: oklch(0.704 0.179 70); /* systemOrange */
+  --chart-4: oklch(0.578 0.258 306); /* systemPurple */
+  --chart-5: oklch(0.685 0.146 220); /* systemTeal */
+
+  --system-blue: var(--chart-1);
+  --system-green: var(--chart-2);
+  --system-orange: var(--chart-3);
+  --system-red: var(--destructive);
+  --system-purple: var(--chart-4);
+  --system-teal: var(--chart-5);
+
+  /* Food-safety semantics, expressed as system colours */
+  --safe: var(--chart-2);
+  --caution: var(--chart-3);
+  --unsafe: var(--destructive);
+  --safe-soft: oklch(0.627 0.194 149 / 0.14);
+  --caution-soft: oklch(0.704 0.179 70 / 0.14);
+  --unsafe-soft: oklch(0.636 0.241 25 / 0.12);
+}
+
+.dark {
+  --background: oklch(0 0 0); /* systemBackground */
+  --foreground: oklch(0.985 0 0); /* label */
+  --card: oklch(0.188 0.004 286); /* secondarySystemGroupedBackground #1C1C1E */
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.216 0.005 286); /* tertiarySystemBackground #2C2C2E */
+  --popover-foreground: oklch(0.985 0 0);
+
+  --muted: oklch(0.188 0.004 286);
+  --muted-foreground: oklch(0.711 0.011 286); /* secondaryLabel #AEAEB2 */
+
+  --primary: oklch(0.623 0.214 259); /* systemBlue #0A84FF */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.269 0.005 286);
+  --secondary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.321 0.006 286); /* secondarySystemFill */
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.2); /* systemRed #FF453A */
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.416 0.005 286); /* opaqueSeparator #38383A */
+  --input: oklch(0.416 0.005 286);
+  --ring: oklch(0.623 0.214 259);
+
+  --hig-separator: oklch(0.831 0.005 286 / 0.4);
+  --hig-opaque-separator: oklch(0.416 0.005 286);
+  --hig-fill: oklch(0.6 0.006 286 / 0.36);
+  --hig-fill-secondary: oklch(0.6 0.006 286 / 0.32);
+  --hig-fill-tertiary: oklch(0.6 0.006 286 / 0.24);
+  --hig-fill-quaternary: oklch(0.6 0.006 286 / 0.18);
+  --hig-bar: oklch(0.6 0.006 286 / 0.36);
+
+  --hig-segment-track: oklch(0.6 0.006 286 / 0.24);
+  --hig-segment-active: oklch(0.72 0.006 286 / 0.52);
+
+  --sidebar: oklch(0.188 0.004 286);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.623 0.214 259);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.6 0.006 286 / 0.24);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.831 0.005 286 / 0.24);
+  --sidebar-ring: oklch(0.623 0.214 259);
+
+  --chart-1: oklch(0.623 0.214 259);
+  --chart-2: oklch(0.722 0.168 150); /* systemGreen #30D158 */
+  --chart-3: oklch(0.769 0.188 70); /* systemOrange #FF9F0A */
+  --chart-4: oklch(0.679 0.237 306); /* systemPurple #BF5AF2 */
+  --chart-5: oklch(0.745 0.126 216); /* systemTeal #40C8E0 */
+
+  --safe-soft: oklch(0.722 0.168 150 / 0.18);
+  --caution-soft: oklch(0.769 0.188 70 / 0.18);
+  --unsafe-soft: oklch(0.704 0.191 22.2 / 0.18);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-safe: var(--safe);
+  --color-caution: var(--caution);
+  --color-unsafe: var(--unsafe);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
+}
+
+/* ============================================================
+   Base — SF Pro with the optical-size + tracking model
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* SF Pro tracking table. Display sizes (17–28pt) take negative
+       tracking; Text sizes take ~0. This is what makes SF Pro look
+       correct rather than merely similar. */
+    --hig-tracking-large-title: -0.022em; /* 34pt emphasized large title */
+    --hig-tracking-title1: -0.02em; /* 28pt */
+    --hig-tracking-title2: -0.012em; /* 22pt */
+    --hig-tracking-title3: -0.008em; /* 20pt — top of the Display range */
+    --hig-tracking-headline: -0.011em; /* 17pt semibold */
+    --hig-tracking-body: -0.011em; /* 17pt */
+    --hig-tracking-callout: -0.008em; /* 16pt */
+    --hig-tracking-subhead: -0.006em; /* 15pt */
+    --hig-tracking-footnote: -0.002em; /* 13pt */
+    --hig-tracking-caption: 0; /* 12pt */
+    --hig-tracking-caption2: 0.002em; /* 11pt */
+
+    --font-hig: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Inter,
+      system-ui, sans-serif;
+    --font-hig-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+  }
+
+  * {
+    @apply border-border;
+    outline-color: color-mix(in oklab, var(--ring) 60%, transparent);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-hig);
+    font-size: 1rem; /* body 17pt is 1.0625rem; 16pt keeps dense tables legible */
+    line-height: 1.5;
+    letter-spacing: var(--hig-tracking-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-synthesis-weight: none;
+  }
+
+  /* Display sizes get the Display optical size and their tracking */
+  h1 {
+    font-size: 2.125rem; /* 34pt large title */
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: var(--hig-tracking-large-title);
+  }
+  h2 {
+    font-size: 1.75rem; /* 28pt title1 */
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: var(--hig-tracking-title1);
+  }
+  h3 {
+    font-size: 1.375rem; /* 22pt title2 */
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: var(--hig-tracking-title2);
+  }
+  h4 {
+    font-size: 1.25rem; /* 20pt title3 */
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: var(--hig-tracking-title3);
+  }
+  h5,
+  h6 {
+    font-size: 1.0625rem; /* 17pt headline */
+    line-height: 1.35;
+    font-weight: 600;
+    letter-spacing: var(--hig-tracking-headline);
+  }
+
+  p {
+    letter-spacing: var(--hig-tracking-body);
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-hig-mono);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--hig-radius-sm);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--system-blue) 24%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--hig-fill);
+    border-radius: 999px;
+    border: 4px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--hig-fill-secondary);
+    background-clip: content-box;
+  }
+
+  /* Leaflet inherits the system palette */
+  .leaflet-container {
+    background: var(--muted);
+    font-family: var(--font-hig);
+  }
+  .leaflet-popup-content-wrapper {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border-radius: var(--hig-radius-lg);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.16);
+    border: 1px solid var(--hig-separator);
+  }
+  .leaflet-popup-content {
+    margin: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .leaflet-control-attribution {
+    background: var(--popover);
+    color: var(--muted-foreground);
+    font-size: 10px;
+    border-radius: var(--hig-radius-sm) 0 0 0;
+  }
+  .leaflet-control-attribution a {
+    color: var(--system-blue);
+  }
+  .leaflet-bar a {
+    background: var(--popover);
+    color: var(--foreground);
+    border: 1px solid var(--hig-separator);
+    width: 34px;
+    height: 34px;
+    line-height: 32px;
+  }
+  .leaflet-bar a:first-child {
+    border-radius: var(--hig-radius-sm) var(--hig-radius-sm) 0 0;
+  }
+  .leaflet-bar a:last-child {
+    border-radius: 0 0 var(--hig-radius-sm) var(--hig-radius-sm);
+    border-bottom: 0;
+  }
+}
+
+/* ============================================================
+   HIG element treatments
+
+   Restyled through shadcn's data-slot hooks, so every component
+   in ui/ inherits the system without forking its source.
+
+   These rules are deliberately UNLAYERED. shadcn ships its own
+   Tailwind utilities on the same elements (py-6 on Card, h-9 on
+   Button, rounded-md on Input). A layered rule would lose to
+   those utilities and the result would depend on the order
+   Tailwind happens to emit them. Unlayered, this block owns
+   component internals outright.
+
+   The rule: declare the properties the design system owns, and
+   leave the rest (width, alignment, visibility) to shadcn and to
+   the call site. A call site that needs to deviate uses a `!`
+   utility — an important declaration beats an unlayered one.
+   ============================================================ */
+
+/* ---- Buttons: plain / tinted / filled hierarchy ---- */
+[data-slot='button'] {
+  border-radius: var(--hig-radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-callout);
+  padding-inline: 0.875rem;
+  transition:
+    transform var(--hig-dur-quick) var(--hig-ease),
+    background-color var(--hig-dur-quick) var(--hig-ease),
+    opacity var(--hig-dur-quick) var(--hig-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+[data-slot='button']:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.75;
+}
+[data-slot='button'][data-size='sm'] {
+  padding-inline: 0.75rem;
+  border-radius: var(--hig-radius-sm);
+  font-size: 0.8125rem;
+}
+[data-slot='button'][data-size='xs'] {
+  padding-inline: 0.5rem;
+  font-size: 0.75rem;
+}
+[data-slot='button'][data-size='lg'] {
+  padding-inline: 1.25rem;
+  border-radius: var(--hig-radius-lg);
+}
+/* Square icon buttons must not inherit the inline padding */
+[data-slot='button'][data-size='icon'],
+[data-slot='button'][data-size='icon-xs'],
+[data-slot='button'][data-size='icon-sm'],
+[data-slot='button'][data-size='icon-lg'] {
+  padding-inline: 0;
+}
+
+/* Plain: no fill until hover — the iOS toolbar button */
+[data-slot='button'][data-variant='ghost'] {
+  background: transparent;
+  color: var(--foreground);
+}
+[data-slot='button'][data-variant='ghost']:hover {
+  background: var(--hig-fill-tertiary);
+}
+
+/* Tinted: system colour wash — the iOS "tinted button" */
+[data-slot='button'][data-variant='secondary'] {
+  background: var(--hig-fill-tertiary);
+  color: var(--foreground);
+}
+[data-slot='button'][data-variant='secondary']:hover {
+  background: var(--hig-fill-secondary);
+}
+
+/* Filled: full-strength system colour */
+[data-slot='button'][data-variant='default'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: none;
+}
+[data-slot='button'][data-variant='default']:hover {
+  background: color-mix(in oklab, var(--primary) 88%, black);
+}
+
+[data-slot='button'][data-variant='outline'] {
+  background: var(--hig-fill-quaternary);
+  color: var(--foreground);
+  border-color: var(--hig-separator);
+  box-shadow: none;
+}
+[data-slot='button'][data-variant='outline']:hover {
+  background: var(--hig-fill-tertiary);
+}
+
+[data-slot='button'][data-variant='destructive'] {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+[data-slot='button'][data-variant='link'] {
+  text-underline-offset: 3px;
+  padding-inline: 0;
+  height: auto;
+}
+
+/* ---- Grouped containers: rounded surface + inset separators ----
+   The card is a grouped container: its sections own their own
+   padding, so the card itself must not add a second layer. */
+[data-slot='card'] {
+  background: var(--card);
+  border: 1px solid var(--hig-separator);
+  border-radius: var(--hig-radius-lg);
+  box-shadow: none;
+  gap: 0;
+  padding: 0 !important;
+}
+[data-slot='card-header'] {
+  padding: 1rem 1rem 0.75rem;
+}
+[data-slot='card-title'] {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-headline);
+  line-height: 1.35;
+}
+[data-slot='card-description'] {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--muted-foreground);
+}
+[data-slot='card-action'] {
+  padding: 0;
+}
+[data-slot='card-content'] {
+  padding: 1rem;
+}
+[data-slot='card-footer'] {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--hig-separator);
+}
+
+/* ---- Inputs: filled fields, 10pt radius ---- */
+[data-slot='input'],
+[data-slot='textarea'],
+[data-slot='select-trigger'] {
+  background: var(--hig-fill-quaternary);
+  border: 1px solid transparent;
+  border-radius: var(--hig-radius-md);
+  height: 2.5rem;
+  padding-inline: 0.75rem;
+  font-size: 0.9375rem;
+  letter-spacing: var(--hig-tracking-callout);
+  color: var(--foreground);
+  box-shadow: none;
+  transition:
+    background-color var(--hig-dur-quick) var(--hig-ease),
+    border-color var(--hig-dur-quick) var(--hig-ease),
+    box-shadow var(--hig-dur-quick) var(--hig-ease);
+}
+[data-slot='input']:hover,
+[data-slot='textarea']:hover,
+[data-slot='select-trigger']:hover {
+  background: var(--hig-fill-tertiary);
+}
+[data-slot='input']:focus,
+[data-slot='textarea']:focus,
+[data-slot='select-trigger']:focus-visible {
+  outline: none;
+  background: var(--card);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3.5px color-mix(in oklab, var(--ring) 22%, transparent);
+}
+[data-slot='input']::placeholder,
+[data-slot='textarea']::placeholder {
+  color: var(--muted-foreground);
+}
+[data-slot='textarea'] {
+  height: auto;
+  padding: 0.625rem 0.75rem;
+  line-height: 1.45;
+}
+[data-slot='select-trigger'] {
+  justify-content: space-between;
+}
+
+/* ---- Field labels: 13pt footnote ---- */
+[data-slot='field-label'] {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--foreground);
+}
+[data-slot='field-description'] {
+  font-size: 0.8125rem;
+  letter-spacing: var(--hig-tracking-footnote);
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+[data-slot='label'] {
+  font-size: 0.9375rem;
+  letter-spacing: var(--hig-tracking-callout);
+}
+
+/* ---- Badges: capsules ---- */
+[data-slot='badge'] {
+  border-radius: var(--hig-radius-full);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.002em;
+  padding-inline: 0.5rem;
+  height: 1.375rem;
+  border-width: 0;
+}
+/* The outline variant becomes a soft neutral capsule rather than a
+   bordered chip. A call site that wants a semantic colour sets it
+   with a `!` utility, which outranks this block. */
+[data-slot='badge'][data-variant='outline'] {
+  background: var(--hig-fill-quaternary);
+  color: var(--foreground);
+}
+
+/* ---- Switches: iOS toggle, 51x31 ----
+   The travel uses the `translate` property, not `transform`. Tailwind
+   v4 implements translate-x-* with `translate` as well, and the two
+   compose — a `transform` here would add to Tailwind's value and
+   push the thumb clean out of the track. */
+[data-slot='switch'] {
+  width: 3.1875rem;
+  height: 1.9375rem;
+  padding: 2px;
+  border-radius: var(--hig-radius-full);
+  border: none;
+  background: var(--hig-fill);
+  box-shadow: none;
+  transition: background-color var(--hig-dur-standard) var(--hig-ease);
+}
+[data-slot='switch'] [data-slot='switch-thumb'] {
+  width: 1.6875rem;
+  height: 1.6875rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 2px 5px rgb(0 0 0 / 0.16),
+    0 0 1px rgb(0 0 0 / 0.16);
+  transition: translate var(--hig-dur-standard) var(--hig-ease);
+}
+[data-slot='switch'][data-state='checked'] {
+  background: var(--system-green);
+}
+[data-slot='switch'][data-state='unchecked'] [data-slot='switch-thumb'] {
+  translate: 0 0;
+}
+[data-slot='switch'][data-state='checked'] [data-slot='switch-thumb'] {
+  translate: 1.25rem 0;
+}
+
+/* ---- Slider: thin track, large thumb ---- */
+[data-slot='slider'] [data-slot='slider-track'] {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hig-fill);
+}
+[data-slot='slider'] [data-slot='slider-range'] {
+  background: var(--primary);
+  border-radius: 999px;
+}
+[data-slot='slider'] [data-slot='slider-thumb'] {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.18),
+    0 0 0 1px rgb(0 0 0 / 0.04);
+  transition: scale var(--hig-dur-quick) var(--hig-ease);
+}
+[data-slot='slider'] [data-slot='slider-thumb']:hover {
+  scale: 1.06;
+}
+
+/* ---- Tabs / toggle groups: segmented control ---- */
+[data-slot='tabs-list'] {
+  background: var(--hig-segment-track);
+  border: none;
+  border-radius: var(--hig-radius);
+  padding: 2px;
+  gap: 2px;
+}
+[data-slot='tabs-trigger'] {
+  border-radius: calc(var(--hig-radius) - 1px);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--foreground);
+  padding-block: 0.375rem;
+  box-shadow: none;
+}
+[data-slot='tabs-trigger'][data-state='active'] {
+  background: var(--hig-segment-active);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+[data-slot='toggle-group-item'] {
+  border-radius: var(--hig-radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-footnote);
+  padding-inline: 0.75rem;
+  height: 2rem;
+}
+
+/* ---- Table: inset separators, no heavy borders ---- */
+[data-slot='table-header'] {
+  background: transparent;
+}
+[data-slot='table-head'] {
+  height: 2.25rem;
+  padding-inline: 1rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--hig-separator);
+  white-space: nowrap;
+}
+[data-slot='table-row'] {
+  border-bottom: 1px solid var(--hig-separator);
+  transition: background-color var(--hig-dur-quick) var(--hig-ease);
+}
+[data-slot='table-row']:hover {
+  background: var(--hig-fill-quaternary);
+}
+[data-slot='table-row']:last-child {
+  border-bottom: 0;
+}
+[data-slot='table-cell'] {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: color-mix(in oklab, var(--foreground) 88%, transparent);
+}
+
+/* ---- Dialog / sheet: iOS panel presentation ---- */
+[data-slot='dialog-overlay'] {
+  background: rgb(0 0 0 / 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+[data-slot='dialog-content'] {
+  border-radius: var(--hig-radius-xl);
+  border: 1px solid var(--hig-separator);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28);
+  animation: hig-pop var(--hig-dur-standard) var(--hig-ease);
+}
+[data-slot='dialog-header'],
+[data-slot='dialog-footer'] {
+  padding-inline: 1.25rem;
+}
+[data-slot='dialog-title'] {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-headline);
+}
+[data-slot='dialog-description'] {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: var(--hig-tracking-footnote);
+}
+
+[data-slot='sheet-overlay'] {
+  background: rgb(0 0 0 / 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+[data-slot='sheet-content'] {
+  background: var(--background);
+  border-color: var(--hig-separator);
+  box-shadow: 0 -8px 40px rgb(0 0 0 / 0.24);
+}
+[data-slot='sheet-header'] {
+  padding: 1rem 1.25rem 0.5rem;
+}
+[data-slot='sheet-title'] {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-headline);
+}
+
+@keyframes hig-pop {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---- Popover: floating panel ---- */
+[data-slot='popover-content'] {
+  background: var(--popover);
+  border-color: var(--hig-separator);
+  border-radius: var(--hig-radius-lg);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+}
+
+/* ---- Tooltip ---- */
+[data-slot='tooltip-content'] {
+  background: color-mix(in oklab, var(--foreground) 92%, transparent);
+  color: var(--background);
+  border-radius: var(--hig-radius-sm);
+  font-size: 0.75rem;
+  letter-spacing: var(--hig-tracking-caption);
+  padding: 0.25rem 0.5rem;
+}
+
+/* ---- Avatar ---- */
+[data-slot='avatar'] {
+  border-radius: 50%;
+  background: var(--hig-fill-secondary);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* ---- Progress ---- */
+[data-slot='progress'] {
+  background: var(--hig-fill-tertiary);
+  border-radius: 999px;
+  height: 6px;
+}
+[data-slot='progress'][data-slot='progress-indicator'] {
+  background: var(--system-green);
+  border-radius: 999px;
+}
+
+/* ---- Skeleton: subtle shimmer ---- */
+[data-slot='skeleton'] {
+  background: linear-gradient(90deg, var(--hig-fill-quaternary), var(--hig-fill-tertiary), var(--hig-fill-quaternary));
+  background-size: 200% 100%;
+  border-radius: var(--hig-radius-sm);
+  animation: hig-shimmer 1.4s linear infinite;
+}
+@keyframes hig-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---- Sidebar: vibrancy list, selection pill ---- */
+[data-slot='sidebar'] {
+  background: var(--sidebar);
+  border-right: 1px solid var(--hig-separator);
+}
+[data-slot='sidebar-header'] {
+  height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid transparent;
+}
+[data-slot='sidebar-content'] {
+  padding: 0.5rem 0.625rem;
+}
+[data-slot='sidebar-group-label'] {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  padding-inline: 0.5rem;
+  height: 1.75rem;
+}
+[data-slot='sidebar-menu-button'] {
+  border-radius: var(--hig-radius);
+  height: 2.25rem;
+  padding-inline: 0.5rem;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 450;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--sidebar-foreground);
+  transition: background-color var(--hig-dur-quick) var(--hig-ease);
+}
+[data-slot='sidebar-menu-button']:hover {
+  background: var(--sidebar-accent);
+}
+[data-slot='sidebar-menu-button'][data-active='true'] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
+  font-weight: 600;
+}
+[data-slot='sidebar-menu-button'][data-active='true']:hover {
+  background: var(--sidebar-accent);
+}
+[data-slot='sidebar-menu-button'] svg {
+  color: var(--muted-foreground);
+}
+[data-slot='sidebar-menu-button'][data-active='true'] svg {
+  color: var(--system-blue);
+}
+[data-slot='sidebar-footer'] {
+  padding: 0.625rem;
+  border-top: 1px solid var(--hig-separator);
+}
+[data-slot='sidebar-separator'] {
+  background: var(--hig-separator);
+}
+[data-slot='sidebar-trigger'] {
+  border-radius: var(--hig-radius);
+  color: var(--foreground);
+}
+
+/* ---- Empty state ---- */
+[data-slot='empty-title'] {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-headline);
+}
+[data-slot='empty-description'] {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  max-width: 36ch;
+  color: var(--muted-foreground);
+}
+[data-slot='empty-media'] {
+  color: var(--muted-foreground);
+}
+
+/* ---- Separator: hairline ---- */
+[data-slot='separator'][data-orientation='horizontal'] {
+  background: var(--hig-separator);
+}
+
+/* ---- Sonner: iOS-style banner ---- */
+[data-sonner-toaster] {
+  --normal-bg: var(--popover);
+  --normal-text: var(--foreground);
+  font-family: var(--font-hig);
+}
+[data-sonner-toast] {
+  border-radius: var(--hig-radius-lg);
+  border: 1px solid var(--hig-separator);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.2);
+  background: var(--popover);
+  color: var(--foreground);
+}
+[data-sonner-toast] [data-title] {
+  font-weight: 600;
+  letter-spacing: var(--hig-tracking-footnote);
+}
+[data-sonner-toast] [data-description] {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  letter-spacing: var(--hig-tracking-footnote);
+}
+
+@layer components {
+/* ============================================================
+   HIG application patterns
+   Navigation bar, large title, grouped list rows, stat tiles.
+   ============================================================ */
+
+/* ---- Navigation bar: translucent material, hairline bottom ---- */
+.hig-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in oklab, var(--background) 72%, transparent);
+  backdrop-filter: var(--hig-blur);
+  -webkit-backdrop-filter: var(--hig-blur);
+  border-bottom: 1px solid var(--hig-separator);
+}
+.hig-navbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3rem;
+}
+.hig-navbar__title {
+  font-size: 1.0625rem;
+  font-weight: 590;
+  letter-spacing: var(--hig-tracking-headline);
+}
+
+/* ---- Large title (iOS navigation bar, collapsed state) ---- */
+.hig-large-title {
+  font-size: 2.125rem;
+  line-height: 1.14;
+  font-weight: 700;
+  letter-spacing: var(--hig-tracking-large-title);
+  color: var(--foreground);
+}
+.hig-subtitle {
+  margin-top: 0.375rem;
+  max-width: 62ch;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  letter-spacing: var(--hig-tracking-callout);
+  color: var(--muted-foreground);
+}
+
+/* ---- Section header above a grouped list ---- */
+.hig-section-label {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--muted-foreground);
+  padding-inline: 0.25rem;
+}
+.hig-section-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: var(--hig-tracking-title2);
+  line-height: 1.2;
+}
+
+/* ---- Display type: the large hero / CTA sizes
+   Apple's marketing surfaces run SF Pro Display well past the
+   navigation-bar range, so tracking stays negative as size grows. */
+.hig-display {
+  font-size: clamp(2.5rem, 7.5vw, 4.25rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+}
+.hig-display-2 {
+  font-size: clamp(1.875rem, 4.5vw, 2.75rem);
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+.hig-lead {
+  font-size: clamp(1.0625rem, 2.2vw, 1.3125rem);
+  line-height: 1.4;
+  letter-spacing: -0.008em;
+  color: var(--muted-foreground);
+}
+.hig-eyebrow {
+  font-size: 0.9375rem;
+  font-weight: 590;
+  letter-spacing: -0.008em;
+  color: var(--system-blue);
+}
+
+/* Section rhythm — HIG spacing scale tops out at 96pt between
+   major sections; fluid so it breathes on large displays too. */
+.hig-band {
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+/* ---- Inline alert: the tinted message block Apple uses for
+     form-level errors and inline notices ---- */
+.hig-alert {
+  border-radius: var(--hig-radius-md);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: var(--hig-tracking-footnote);
+}
+.hig-alert--error {
+  background: var(--unsafe-soft);
+  color: var(--unsafe);
+}
+.hig-alert--info {
+  background: var(--hig-fill-tertiary);
+  color: var(--foreground);
+}
+
+/* ---- Selectable option card (role picker, and similar) ---- */
+.hig-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: var(--hig-tap-comfortable);
+  padding: 0.75rem;
+  border-radius: var(--hig-radius-md);
+  background: var(--hig-fill-quaternary);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--hig-dur-quick) var(--hig-ease),
+    border-color var(--hig-dur-quick) var(--hig-ease);
+}
+.hig-choice:hover {
+  background: var(--hig-fill-tertiary);
+}
+.hig-choice:has([data-state='checked']) {
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+  border-color: var(--primary);
+}
+
+/* ---- Content panel: the generic grouped container for marketing
+     and dashboard blocks that are not cards or list groups ---- */
+.hig-panel {
+  background: var(--card);
+  border: 1px solid var(--hig-separator);
+  border-radius: var(--hig-radius-lg);
+  padding: 1.25rem;
+}
+
+/* ---- Chart containment
+   A chart that overflows its card paints over its neighbours, so the
+   holder is capped and the grid item is allowed to shrink. */
+[data-slot='chart'] {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* ---- Grouped list: rounded container, inset hairline separators ---- */
+.hig-group {
+  background: var(--card);
+  border: 1px solid var(--hig-separator);
+  border-radius: var(--hig-radius-lg);
+  overflow: hidden;
+}
+/* Pull a group out of its parent's padding so the rows line up with
+   the section label above them instead of sitting double-indented. */
+.hig-group--bleed {
+  margin-inline: -1rem;
+}
+.hig-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.875rem; /* 44pt plain row */
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--hig-separator);
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  transition: background-color var(--hig-dur-quick) var(--hig-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.hig-row:last-child {
+  border-bottom: 0;
+}
+button.hig-row:hover,
+a.hig-row:hover {
+  background: var(--hig-fill-quaternary);
+}
+button.hig-row:active {
+  background: var(--hig-fill-tertiary);
+}
+.hig-row--tappable {
+  cursor: pointer;
+}
+.hig-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--hig-radius-sm);
+  background: var(--hig-fill-tertiary);
+  color: var(--muted-foreground);
+  flex: none;
+}
+.hig-row__body {
+  min-width: 0;
+  flex: 1;
+}
+.hig-row__title {
+  font-size: 0.9375rem;
+  font-weight: 450;
+  letter-spacing: var(--hig-tracking-callout);
+  color: var(--foreground);
+}
+.hig-row__subtitle {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--muted-foreground);
+}
+.hig-row__accessory {
+  flex: none;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hig-row__chevron {
+  color: var(--hig-fill-secondary);
+}
+
+/* ---- Stat tile: label above value, no chrome ---- */
+.hig-stat {
+  padding: 1rem 1.125rem;
+  background: var(--card);
+  border: 1px solid var(--hig-separator);
+  border-radius: var(--hig-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.hig-stat__label {
+  font-size: 0.75rem;
+  font-weight: 450;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--muted-foreground);
+}
+.hig-stat__value {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: var(--hig-tracking-title2);
+  font-variant-numeric: tabular-nums;
+}
+.hig-stat__sub {
+  font-size: 0.75rem;
+  letter-spacing: var(--hig-tracking-footnote);
+  color: var(--muted-foreground);
+}
+
+/* ---- Search field in the HIG style ---- */
+.hig-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.hig-search input {
+  width: 100%;
+  height: 2.25rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  border-radius: var(--hig-radius-md);
+  background: var(--hig-fill-tertiary);
+  border: 1px solid transparent;
+  font-size: 0.9375rem;
+  letter-spacing: var(--hig-tracking-callout);
+  color: var(--foreground);
+  transition: background-color var(--hig-dur-quick) var(--hig-ease);
+}
+.hig-search input::placeholder {
+  color: var(--muted-foreground);
+}
+.hig-search input:focus {
+  outline: none;
+  background: var(--card);
+  box-shadow: 0 0 0 3.5px color-mix(in oklab, var(--ring) 22%, transparent);
+}
+.hig-search__icon {
+  position: absolute;
+  left: 0.625rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  display: flex;
+}
+.hig-search__clear {
+  position: absolute;
+  right: 0.375rem;
+  display: flex;
+  padding: 0.375rem;
+  border-radius: 50%;
+  color: var(--muted-foreground);
+  background: var(--hig-fill-secondary);
+}
+.hig-search__clear:hover {
+  color: var(--foreground);
+}
+
+/* ---- Meter ---- */
+.hig-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--hig-fill-tertiary);
+  overflow: hidden;
+}
+.hig-meter__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--hig-dur-slow) var(--hig-ease);
+}
+
+/* ---- Sidebar account row ---- */
+.hig-account {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  border-radius: var(--hig-radius);
+  min-width: 0;
+}
+
+} /* end @layer components */
+
+/* ============================================================
+   Touch targets — HIG minimums apply to coarse pointers
+   ============================================================ */
+@media (pointer: coarse) {
+  [data-slot='button']:not([data-size='icon']),
+  [data-slot='select-trigger'] {
+    min-height: var(--hig-tap-min);
+  }
+  [data-slot='button'][data-size='icon'] {
+    width: var(--hig-tap-min);
+    height: var(--hig-tap-min);
+  }
+  [data-slot='sidebar-menu-button'] {
+    height: var(--hig-tap-min);
+  }
+  .hig-row {
+    min-height: var(--hig-tap-min);
+  }
+}

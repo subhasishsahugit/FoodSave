@@ -1,5 +1,8 @@
 {
   "cSpell.words": [
     "foodsave"
-  ]
+  ],
+  "python.defaultInterpreterPath": "C:\\Users\\NITRO\\ml-global-env\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true,
+  "jupyter.kernels.defaultKernel": "ml-global-env"
 }

@@ -2,13 +2,14 @@ import pickle
 import sqlite3
 import json
 import math
+import os
 import secrets
 import random as _rand
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 from sklearn.ensemble import RandomForestRegressor
 
 
@@ -38,11 +39,14 @@ ODISHA_CITIES: dict[str, tuple[float, float]] = {
 }
 _ODISHA_COORDS = list(ODISHA_CITIES.values())
 
+# The React SPA is built by Vite into web/dist (see frontend/).
+DIST_DIR = BASE_DIR / "web" / "dist"
+
 app = Flask(
     __name__,
-    template_folder=str(WEB_DIR / "templates"),
-    static_folder=str(WEB_DIR / "static"),
-    static_url_path="/static",
+    template_folder=str(DIST_DIR),
+    static_folder=str(DIST_DIR / "assets"),
+    static_url_path="/assets",
 )
 app.json.ensure_ascii = False
 
@@ -640,13 +644,25 @@ def get_claim_chat_context(conn: sqlite3.Connection, food_id: int, username: str
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_spa(path: str = "", vpath: str = ""):
-    """Serve SPA shell for all non-API routes, including legacy /v2 paths."""
+    """Serve the built SPA shell for all non-API routes, including legacy /v2 paths."""
     route_path = vpath or path
     if path.startswith("api/"):
         return jsonify({"status": "error", "message": "not found"}), 404
     if route_path.startswith("api/"):
         return jsonify({"status": "error", "message": "not found"}), 404
-    return render_template("index.html")
+
+    index = DIST_DIR / "index.html"
+    if not index.exists():
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Frontend not built. Run `npm install && npm run build` in hybrid_app/frontend.",
+                }
+            ),
+            503,
+        )
+    return send_file(index)
 
 
 @app.route("/api/cities", methods=["GET"])
@@ -2385,4 +2401,7 @@ def delete_food_listing(food_id: int | None = None):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # Local development keeps the reloader; platforms that inject PORT run clean.
+    port = int(os.environ.get("PORT", "5000"))
+    debug = os.environ.get("PORT") is None and os.environ.get("FLASK_DEBUG") != "0"
+    app.run(host="0.0.0.0", port=port, debug=debug)

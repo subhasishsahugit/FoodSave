@@ -27,12 +27,12 @@ jobs:
         run: pip install -r hybrid_app/requirements.txt
 
       - name: Seed database
-        run: python hybrid_app/seed_db.py
+        run: python hybrid_app/scripts/seed_db.py
 
       - name: Smoke-test Flask app starts
         run: |
-          FLASK_DEBUG=0 python hybrid_app/app.py &
+          PORT=5000 python hybrid_app/app.py &
           APP_PID=$!
-          sleep 5
-          curl --fail --silent --show-error http://127.0.0.1:5000/ | grep -q "FoodSave" && echo "App responded OK"
+          sleep 6
+          curl --fail --silent --show-error http://127.0.0.1:5000/api/cities | grep -q "Bhubaneswar" && echo "API responded OK"
           kill $APP_PID
