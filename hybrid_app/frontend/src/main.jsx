@@ -24,12 +24,14 @@ function ThemedToaster() {
   )
 }
 
+const routerBase = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') || '/'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
       <AppProvider>
         <TooltipProvider delayDuration={200}>
-          <BrowserRouter>
+          <BrowserRouter basename={routerBase}>
             <App />
           </BrowserRouter>
           <ThemedToaster />
