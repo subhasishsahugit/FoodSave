@@ -6,11 +6,13 @@
  * VITE_API_BASE_URL at build time to the backend origin. Empty means
  * same-origin, which is what local development uses.
  */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
-function resolveUrl(path) {
-  if (!API_BASE || /^https?:\/\//i.test(path)) return path
-  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
+function toApiUrl(path) {
+  if (!API_BASE_URL) return path
+  if (/^https?:\/\//i.test(path)) return path
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return `${API_BASE_URL}${normalizedPath}`
 }
 
 async function request(path, options = {}) {
@@ -25,7 +27,7 @@ async function request(path, options = {}) {
 
   let response
   try {
-    response = await fetch(resolveUrl(path), { method, headers, body: payload, signal })
+    response = await fetch(toApiUrl(path), { method, headers, body: payload, signal })
   } catch {
     throw new Error('Network error — is the FoodSave server running?')
   }

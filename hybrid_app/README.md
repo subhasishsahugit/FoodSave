@@ -43,6 +43,17 @@ python app.py
 
 Open **http://127.0.0.1:5000**
 
+## 🌐 GitHub Pages Deployment (Frontend)
+
+This repository includes `.github/workflows/deploy-pages.yml` to deploy the React frontend to GitHub Pages.
+
+1. In GitHub, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+2. (Optional, recommended) Add a repository variable named `VITE_API_BASE_URL` with your backend URL
+   (for example, `https://your-backend.example.com`) so API calls from Pages do not point to the Pages domain.
+3. Push to `main` (or run the workflow manually) and the site will be published automatically.
+
+The Pages build uses a repository subpath base and also publishes `404.html` as an SPA fallback for client-side routes.
+
 ## 🧩 Architecture
 
 Flask serves the API **and** the compiled SPA from `web/dist`. Routing is a normal React Router tree, so any
