@@ -4,10 +4,15 @@ services:
     runtime: python
     plan: free
     rootDir: hybrid_app
-    buildCommand: pip install -r requirements.txt
+    # Seed during the build so a fresh deploy (or wake from sleep) always has
+    # the demo accounts and listings. Safe to re-run: inserts are idempotent.
+    buildCommand: pip install -r requirements.txt && python scripts/seed_db.py
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     healthCheckPath: /api/cities
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.10"
+      # The Pages frontend runs on a different origin, so the API must allow it.
+      - key: ALLOWED_ORIGINS
+        value: "https://subhasishsahugit.github.io,http://localhost:5173,http://127.0.0.1:5173"
