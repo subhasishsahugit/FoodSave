@@ -1,0 +1,17 @@
+.git
+.github
+.vscode
+.claude
+.continue
+memories
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+README.md
+docs

@@ -9,7 +9,6 @@ env/
 
 # ---- Node / frontend build output ----
 node_modules/
-hybrid_app/web/dist/
 
 # ---- Local runtime data ----
 *.db

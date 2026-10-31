@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: foodsave
+    runtime: python
+    plan: free
+    rootDir: hybrid_app
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    healthCheckPath: /api/cities
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.10"
