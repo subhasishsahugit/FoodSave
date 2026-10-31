@@ -1,7 +1,18 @@
 /**
  * Thin fetch wrapper. Rejects on non-2xx or a non-success status so callers
  * can treat a resolved promise as "it worked".
+ *
+ * When the SPA is hosted separately from Flask (e.g. GitHub Pages), set
+ * VITE_API_BASE_URL at build time to the backend origin. Empty means
+ * same-origin, which is what local development uses.
  */
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+
+function resolveUrl(path) {
+  if (!API_BASE || /^https?:\/\//i.test(path)) return path
+  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 async function request(path, options = {}) {
   const { method = 'GET', body, signal } = options
   const headers = {}
@@ -14,7 +25,7 @@ async function request(path, options = {}) {
 
   let response
   try {
-    response = await fetch(path, { method, headers, body: payload, signal })
+    response = await fetch(resolveUrl(path), { method, headers, body: payload, signal })
   } catch {
     throw new Error('Network error — is the FoodSave server running?')
   }
