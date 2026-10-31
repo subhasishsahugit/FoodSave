@@ -45,7 +45,7 @@ Open **http://127.0.0.1:5000**
 
 ## 🌐 GitHub Pages Deployment (Frontend)
 
-This repository includes `.github/workflows/deploy-pages.yml` to deploy the React frontend to GitHub Pages.
+This repository includes `.github/workflows/deploy-frontend.yml` to deploy the React frontend to GitHub Pages. The live site is **https://subhasishsahugit.github.io/FoodSave/**.
 
 1. In GitHub, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
 2. (Optional, recommended) Add a repository variable named `VITE_API_BASE_URL` with your backend URL
